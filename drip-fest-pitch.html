@@ -1,0 +1,1498 @@
+<!-- saved from url=(0012)about:srcdoc -->
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIP FEST | 808 MAFIA EVENT SERIES</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --neon-cyan: #00f5ff;
+            --neon-purple: #bf00ff;
+            --neon-green: #39ff14;
+            --neon-gold: #ffd700;
+            --neon-red: #ff003c;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --font-heading: 'Orbitron', sans-serif;
+            --font-body: 'Share Tech Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-heading);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* UI Elements */
+        .ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+
+        .slide-counter {
+            position: absolute;
+            bottom: 30px;
+            right: 40px;
+            font-size: 1.2rem;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+        .progress-bar-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--neon-purple);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--neon-purple);
+        }
+
+        .sys-status {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            font-size: 0.9rem;
+            color: var(--neon-green);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sys-status::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-green);
+            animation: blink 1.5s infinite;
+        }
+
+        /* BIGGER & CENTERED NAV BUTTONS - ONLY CHANGE MADE */
+        .nav-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            pointer-events: auto;
+            z-index: 110;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 18px 35px;
+            font-family: var(--font-body);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            min-width: 160px;
+            text-align: center;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 245, 255, 0.25);
+            box-shadow: 0 0 25px var(--neon-cyan);
+            transform: scale(1.05);
+        }
+
+        .nav-btn:disabled {
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+        }
+
+        /* Slides Container */
+        .deck-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 60px 80px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 10;
+        }
+
+        .slide-title {
+            font-size: 3.5rem;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 15px rgba(0, 245, 255, 0.5);
+            margin-bottom: 40px;
+            text-align: center;
+            border-bottom: 2px solid rgba(0, 245, 255, 0.3);
+            padding-bottom: 15px;
+        }
+
+        /* Glitch Effect */
+        .glitch {
+            position: relative;
+            color: white;
+            font-size: 6rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px var(--neon-purple);
+            margin-bottom: 20px;
+        }
+
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+        }
+
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--neon-red);
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 var(--neon-cyan);
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+        /* Cards */
+        .card {
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            padding: 30px;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-cyan);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card h3 {
+            color: var(--neon-gold);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .card p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        /* Specific Slide Styles */
+        
+        /* Slide 1: NDA */
+        #slide-1 {
+            background: radial-gradient(circle at center, #2a0000 0%, #000 100%);
+            text-align: center;
+            align-items: center;
+        }
+        #slide-1 .slide-title {
+            color: var(--neon-red);
+            text-shadow: 0 0 15px rgba(255, 0, 60, 0.5);
+            border-bottom-color: rgba(255, 0, 60, 0.3);
+        }
+        .nda-box {
+            max-width: 800px;
+            border: 1px solid var(--neon-red);
+            padding: 40px;
+            background: rgba(20, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(255, 0, 60, 0.2);
+        }
+        .nda-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin: 20px 0;
+            text-align: justify;
+        }
+        .btn-agree {
+            background: transparent;
+            border: 2px solid var(--neon-red);
+            color: var(--neon-red);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-family: var(--font-heading);
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s;
+        }
+        .btn-agree:hover {
+            background: rgba(255, 0, 60, 0.2);
+            box-shadow: 0 0 20px var(--neon-red);
+        }
+
+        /* Slide 2: Cover */
+        #slide-2 {
+            text-align: center;
+            align-items: center;
+        }
+        .cover-subtitle {
+            font-size: 2rem;
+            color: var(--neon-cyan);
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+        }
+        .cover-tagline {
+            font-size: 1.5rem;
+            color: var(--neon-gold);
+            margin-bottom: 40px;
+        }
+        .cover-meta {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-top: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Slide 6: Timeline */
+        .timeline {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: var(--neon-purple);
+            transform: translateX(-50%);
+        }
+        .timeline-item {
+            display: flex;
+            justify-content: flex-end;
+            padding-right: 50%;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .timeline-item:nth-child(even) {
+            justify-content: flex-start;
+            padding-right: 0;
+            padding-left: 50%;
+        }
+        .timeline-content {
+            width: 90%;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: -11px;
+            width: 20px;
+            height: 20px;
+            background: var(--bg-color);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .timeline-item:nth-child(even) .timeline-content::before {
+            right: auto;
+            left: -11px;
+        }
+        .timeline-date {
+            color: var(--neon-cyan);
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        /* Slide 7: Demographics */
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            padding-top: 40px;
+            border-bottom: 1px solid #333;
+            border-left: 1px solid #333;
+        }
+        .bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+        }
+        .bar {
+            width: 60%;
+            background: linear-gradient(to top, rgba(0, 245, 255, 0.2), var(--neon-cyan));
+            position: relative;
+            transition: height 1s ease;
+        }
+        .bar-label {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            width: 100%;
+            text-align: center;
+            color: var(--neon-gold);
+            font-family: var(--font-heading);
+        }
+
+        /* Slide 9: Patchwerk VR */
+        .vr-layout {
+            width: 100%;
+            height: 500px;
+            border: 1px solid var(--neon-green);
+            position: relative;
+            background: 
+                linear-gradient(rgba(57, 255, 20, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(57, 255, 20, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            overflow: hidden;
+        }
+        .vr-scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--neon-green);
+            box-shadow: 0 0 20px var(--neon-green);
+            opacity: 0.5;
+            animation: scan 4s linear infinite;
+        }
+        .room {
+            position: absolute;
+            border: 1px solid rgba(57, 255, 20, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            color: var(--neon-green);
+            transition: all 0.3s;
+        }
+        .room:hover {
+            background: rgba(57, 255, 20, 0.2);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+            z-index: 10;
+        }
+        .room.highlight {
+            border-color: var(--neon-purple);
+            color: var(--neon-purple);
+            box-shadow: inset 0 0 15px rgba(191, 0, 255, 0.3);
+        }
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background: #111;
+            padding: 12px 0;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+            margin-top: 20px;
+        }
+        .ticker {
+            display: inline-block;
+            white-space: nowrap;
+            padding-right: 100%;
+            animation: ticker 50s linear infinite;
+            color: var(--neon-gold);
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        /* Slide 14: Donut Chart */
+        .donut-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+            gap: 50px;
+        }
+        .donut-chart {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: conic-gradient(
+                var(--neon-cyan) 0% 45%, 
+                var(--neon-purple) 45% 75%, 
+                var(--neon-gold) 75% 90%, 
+                var(--neon-green) 90% 95%, 
+                var(--neon-red) 95% 98%, 
+                #555 98% 100%
+            );
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+        .donut-hole {
+            width: 200px;
+            height: 200px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        /* Slide 15: Stats */
+        .stat-box {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            border-top: 3px solid var(--neon-cyan);
+        }
+        .stat-value {
+            font-size: 3.5rem;
+            font-family: var(--font-heading);
+            color: var(--neon-cyan);
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+        }
+        .stat-label {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Slide 20: CTA */
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .btn-cta {
+            padding: 20px 40px;
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+        .btn-primary:hover {
+            background: rgba(0, 245, 255, 0.2);
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+        .btn-secondary {
+            border: 2px solid var(--neon-purple);
+            color: var(--neon-purple);
+        }
+        .btn-secondary:hover {
+            background: rgba(191, 0, 255, 0.2);
+            box-shadow: 0 0 20px var(--neon-purple);
+        }
+        .contact-box {
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            padding: 35px;
+            max-width: 650px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .contact-box p {
+            margin: 12px 0;
+            font-size: 1.35rem;
+        }
+        .contact-highlight {
+            color: var(--neon-gold);
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .contact-highlight:hover {
+            color: #fff;
+        }
+        .back-btn {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            background: transparent;
+            border: 2px solid var(--neon-red);
+            color: var(--neon-red);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(255, 0, 60, 0.15);
+            box-shadow: 0 0 20px var(--neon-red);
+        }
+
+        /* Animations */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        @keyframes glitch-anim {
+            0% { clip: rect(42px, 9999px, 44px, 0); }
+            5% { clip: rect(12px, 9999px, 59px, 0); }
+            10% { clip: rect(48px, 9999px, 29px, 0); }
+            15% { clip: rect(42px, 9999px, 73px, 0); }
+            20% { clip: rect(63px, 9999px, 27px, 0); }
+            25% { clip: rect(34px, 9999px, 55px, 0); }
+            30% { clip: rect(86px, 9999px, 73px, 0); }
+            35% { clip: rect(20px, 9999px, 20px, 0); }
+            40% { clip: rect(26px, 9999px, 60px, 0); }
+            45% { clip: rect(25px, 9999px, 66px, 0); }
+            50% { clip: rect(57px, 9999px, 98px, 0); }
+            55% { clip: rect(5px, 9999px, 46px, 0); }
+            60% { clip: rect(82px, 9999px, 31px, 0); }
+            65% { clip: rect(54px, 9999px, 27px, 0); }
+            70% { clip: rect(28px, 9999px, 99px, 0); }
+            75% { clip: rect(45px, 9999px, 69px, 0); }
+            80% { clip: rect(23px, 9999px, 85px, 0); }
+            85% { clip: rect(54px, 9999px, 84px, 0); }
+            90% { clip: rect(45px, 9999px, 47px, 0); }
+            95% { clip: rect(37px, 9999px, 20px, 0); }
+            100% { clip: rect(4px, 9999px, 91px, 0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(65px, 9999px, 100px, 0); }
+            5% { clip: rect(52px, 9999px, 74px, 0); }
+            10% { clip: rect(79px, 9999px, 85px, 0); }
+            15% { clip: rect(75px, 9999px, 5px, 0); }
+            20% { clip: rect(67px, 9999px, 61px, 0); }
+            25% { clip: rect(14px, 9999px, 79px, 0); }
+            30% { clip: rect(1px, 9999px, 66px, 0); }
+            35% { clip: rect(86px, 9999px, 30px, 0); }
+            40% { clip: rect(23px, 9999px, 98px, 0); }
+            45% { clip: rect(85px, 9999px, 72px, 0); }
+            50% { clip: rect(71px, 9999px, 75px, 0); }
+            55% { clip: rect(2px, 9999px, 48px, 0); }
+            60% { clip: rect(30px, 9999px, 16px, 0); }
+            65% { clip: rect(59px, 9999px, 50px, 0); }
+            70% { clip: rect(41px, 9999px, 62px, 0); }
+            75% { clip: rect(2px, 9999px, 82px, 0); }
+            80% { clip: rect(47px, 9999px, 73px, 0); }
+            85% { clip: rect(3px, 9999px, 27px, 0); }
+            90% { clip: rect(26px, 9999px, 55px, 0); }
+            95% { clip: rect(42px, 9999px, 97px, 0); }
+            100% { clip: rect(38px, 9999px, 49px, 0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid-4 { grid-template-columns: 1fr 1fr; }
+            .grid-6 { grid-template-columns: 1fr 1fr; }
+            .slide-title { font-size: 2.5rem; }
+            .glitch { font-size: 4rem; }
+        }
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4, .grid-6 { grid-template-columns: 1fr; }
+            .slide { padding: 40px 20px; }
+            .donut-container { flex-direction: column; height: auto; }
+            .cta-buttons { flex-direction: column; }
+            .ticker { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Music -->
+    <audio id="bgm" autoplay loop>
+        <source src="drip-fest-bgm.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- UI Layer -->
+    <div class="ui-layer" id="ui-layer">
+        <div class="sys-status">SYSTEM ONLINE // 808.MFA</div>
+        
+        <!-- BIGGER & CENTERED NAV BUTTONS - ONLY CHANGE -->
+        <div class="nav-controls">
+            <button class="nav-btn" id="btn-prev" onclick="prevSlide()" disabled="">◀ PREV</button>
+            <button class="nav-btn" id="btn-next" onclick="nextSlide()">NEXT ▶</button>
+        </div>
+
+        <div class="slide-counter" id="slide-counter">01 / 20</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+        </div>
+    </div>
+
+    <div class="deck-container">
+
+        <!-- SLIDE 1: NDA -->
+        <div class="slide active" id="slide-1">
+            <h1 class="slide-title">NON-DISCLOSURE AGREEMENT</h1>
+            <h2 style="color: var(--neon-red); margin-bottom: 30px; font-family: var(--font-heading);">CONFIDENTIAL — AUTHORIZED RECIPIENTS ONLY</h2>
+            
+            <div class="nda-box">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="var(--neon-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <p class="nda-text">
+                    This document contains proprietary and confidential information belonging to 808 MAFIA. By viewing this presentation, the recipient agrees not to disclose, reproduce, or distribute any information contained herein without prior written consent. 
+                </p>
+                <p class="nda-text">
+                    This document is intended solely for the named recipient and their authorized representatives. Any unauthorized review, use, disclosure, or distribution is strictly prohibited.
+                </p>
+                <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    Contact for authorization: sWampgOd@808Mafia.Live | (808) 825-5311 | 808Mafia.Live
+                </div>
+                <button class="btn-agree" onclick="acceptNDA()">I ACKNOWLEDGE & AGREE</button>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: COVER -->
+        <div class="slide" id="slide-2">
+            <div class="glitch" data-text="DRIP FEST">DRIP FEST</div>
+            <div class="cover-subtitle">808 MAFIA EVENT SERIES</div>
+            <div class="cover-subtitle" style="font-size: 1.2rem; color: var(--text-main);">OFFICIAL PITCH DECK</div>
+            
+            <div style="margin: 40px 0; width: 100px; height: 2px; background: var(--neon-purple); display: inline-block;"></div>
+            
+            <div class="cover-tagline">WHERE MUSIC, ART, DANCE & TECHNOLOGY COLLIDE</div>
+            
+            <div class="cover-meta">
+                <span>COORD: 34.0522° N, 118.2437° W</span>
+                <span style="color: var(--neon-green);">SYS.RDY // 808.MFA</span>
+                <span style="margin-top: 20px;">sWampgOd@808Mafia.Live | (808) 825-5311 | 808Mafia.Live</span>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: PROBLEM -->
+        <div class="slide" id="slide-3">
+            <h2 class="slide-title">BRIDGING THE GAP IN MUSIC INDUSTRY</h2>
+            <div style="color: var(--neon-red); font-family: var(--font-heading); margin-bottom: 30px; text-align: center;">CONNECTION UNSTABLE — ERROR 404: INFRASTRUCTURE NOT FOUND</div>
+            
+            <div class="grid-2">
+                <div class="card" style="border-left: 3px solid var(--neon-red);">
+                    <h3>01. LACK OF GLOBAL EXPOSURE</h3>
+                    <p>Local talent consistently lacks the necessary exposure to global artists and international markets. The bridge between underground creators and mainstream success is broken, leaving incredible talent undiscovered.</p>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--neon-red);">
+                    <h3>02. LIMITED NETWORKING</h3>
+                    <p>Currently there is a limited number of platforms for media production education with global netwerking potential. Aspiring beatmakers in need of a centralized hub with access to industry mentorship along side outreach potential within our new immersive VR landscape.</p>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--neon-red);">
+                    <h3>03. OUTDATED TECH</h3>
+                    <p>Traditional festivals lack interactive technology integration. The modern audience demands immersive experiences, yet most events still rely on age-old passive viewing rather than multiple forms of participation.</p>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--neon-red);">
+                    <h3>04. NEED FOR INCLUSION</h3>
+                    <p>There is a desperate need for inclusive, non-traditional events that exibit live art and creative spaces. Our existing entertainment industry requires environments where diverse subcultures (fashion, gaming, tech, and music, etc.) can converge universally in real-time.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: SOLUTION -->
+        <div class="slide" id="slide-4">
+            <h2 class="slide-title">A REVOLUTIONARY MUSIC EXPERIENCE</h2>
+            
+            <div class="grid-4">
+                <div class="card" style="border-top: 3px solid var(--neon-cyan); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🎧</div>
+                    <h3 style="font-size: 1.2rem;">HYBRID EVENT MODEL</h3>
+                    <p style="font-size: 0.95rem;">Join 808 Mafia for hands-on Workshops and experience a World-Class Producer Summit featuring Live Performances and a Grand Finale Ceremony offering Record Deals and Prizes to the top Finalists.</p>
+                </div>
+                <div class="card" style="border-top: 3px solid var(--neon-purple); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🌌</div>
+                    <h3 style="font-size: 1.2rem;">LIMITLESS EXPRESSION</h3>
+                    <p style="font-size: 0.95rem;">A new resource of infinite progression highlighting Style, Art, and Community without borders. Merging Flow Arts, Music, Fashion, and more, into one Multi-Faceted Experience.</p>
+                </div>
+                <div class="card" style="border-top: 3px solid var(--neon-gold); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🌍</div>
+                    <h3 style="font-size: 1.2rem;">GLOBAL EXPANSION</h3>
+                    <p style="font-size: 0.95rem;">Starting as an Annual Flagship Event rapidly expanding into a  nationwide campaign and global talent search. A unique viral pipeline, highlighting the next generation of creative minds.</p>
+                </div>
+                <div class="card" style="border-top: 3px solid var(--neon-green); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🕶️</div>
+                    <h3 style="font-size: 1.2rem;">TECH INTEGRATION</h3>
+                    <p style="font-size: 0.95rem;">Pioneering VR adventure streaming with augmented reality integration, allowing fans worldwide to experience the festival as if they were front row.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: EXPERIENCE -->
+        <div class="slide" id="slide-5">
+            <h2 class="slide-title">THE DRIP FEST EXPERIENCE</h2>
+            
+            <div class="grid-6">
+                <div class="card">
+                    <h3 style="color: var(--neon-cyan);">PRODUCER CONFERENCE</h3>
+                    <p>Exclusive 808 Mafia workshops, masterclasses, and intimate Q&A sessions. Learn sound design, mixing, and industry business directly from multi-platinum producers.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--neon-purple);">BATTLE OCTAGONS</h3>
+                    <p>8 custom-built rings shaped like '808' for intense, bracket-style beat battles. Producers go head-to-head with live crowd voting and celebrity judges.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--neon-green);">VR EXPERIENCE</h3>
+                    <p>Interactive Augmented Reality zones scattered throughout the venue. Attendees can unlock hidden digital art, exclusive tracks, and VIP upgrades via their devices.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--neon-gold);">24H POOL PARTIES</h3>
+                    <p>The energy never stops. Non-stop action at partner hotels featuring exclusive DJ sets, brand activations, and networking in a high-energy environment.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--neon-red);">SECRET SPEAKEASY</h3>
+                    <p>An exclusive, hidden performance venue somewhere on the grounds. Password required for entry. Features surprise acoustic sets and unannounced A-list appearances.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--text-main);">COSPLAY BALL</h3>
+                    <p>A Sci-Fi Alien Planet themed gala event. Merging the worlds of anime, gaming, and hip-hop into a visually stunning, high-fashion costume celebration.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: TIMELINE -->
+        <div class="slide" id="slide-6">
+            <h2 class="slide-title">ROAD TO DRIP FEST</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">MAR 28 // LAUNCH PARTY</div>
+                        <p>1st Annual kickoff event to build initial hype, secure early-bird ticket sales, and showcase a preview of the Drip Fest aesthetic to local media.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">PRE-EVENT // LOGISTICS</div>
+                        <p>Talent briefing, administrative meetings, I.A.T.S.E UNION crew setup, stage construction, and final tech rehearsals for VR/AR systems.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">OCT 31 // LAUNCH DAY</div>
+                        <p>8 Headliners, aerial drone performances, immersive VR opening ceremony. The festival grounds open to the public.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">NOV 01 // EDUCATION & SHOWCASE</div>
+                        <p>Super Producer Masterclasses, Emerging Artist Showcases, and high-level Industry Networking Mixers.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">NOV 02 // AWARDS & CLOSING</div>
+                        <p>Drip Fest Awards Ceremony, Beat Battle Grand Finale, and Special Guest DJ Sets to close out the main festival.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">NOV 08 // AFTER PARTY</div>
+                        <p>Exclusive staff wrap-up and celebration at the Tokyo Japan Kill Bill Hotel. Debriefing and planning for Year 2.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: AUDIENCE -->
+        <div class="slide" id="slide-7">
+            <h2 class="slide-title">REACHING THE NEXT GENERATION</h2>
+            
+            <div class="grid-2" style="margin-bottom: 40px;">
+                <div class="card" style="border-color: var(--neon-cyan);">
+                    <h3 style="color: var(--neon-cyan);">PRIMARY DEMOGRAPHIC</h3>
+                    <ul style="list-style: none; line-height: 2;">
+                        <li><span style="color: var(--neon-cyan);">►</span> Ages 18-28</li>
+                        <li><span style="color: var(--neon-cyan);">►</span> Music Producers & Beatmakers</li>
+                        <li><span style="color: var(--neon-cyan);">►</span> Independent Artists</li>
+                        <li><span style="color: var(--neon-cyan);">►</span> Cosplay & Anime Enthusiasts</li>
+                        <li><span style="color: var(--neon-cyan);">►</span> Tech-Savvy Early Adopters</li>
+                    </ul>
+                </div>
+                <div class="card" style="border-color: var(--neon-purple);">
+                    <h3 style="color: var(--neon-purple);">SECONDARY DEMOGRAPHIC</h3>
+                    <ul style="list-style: none; line-height: 2;">
+                        <li><span style="color: var(--neon-purple);">►</span> Industry Professionals & A&Rs</li>
+                        <li><span style="color: var(--neon-purple);">►</span> Recording Studios & Audio Brands</li>
+                        <li><span style="color: var(--neon-purple);">►</span> Media Outlets & Influencers</li>
+                        <li><span style="color: var(--neon-purple);">►</span> Global Hip-Hop/EDM Fans (via VR)</li>
+                        <li><span style="color: var(--neon-purple);">►</span> Local Arts Communities</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="bar-wrapper">
+                    <div class="bar" style="height: 85%; background: linear-gradient(to top, rgba(0, 245, 255, 0.2), var(--neon-cyan));">
+                        <div class="bar-value">85%</div>
+                    </div>
+                    <div class="bar-label">Ages 18-28</div>
+                </div>
+                <div class="bar-wrapper">
+                    <div class="bar" style="height: 65%; background: linear-gradient(to top, rgba(191, 0, 255, 0.2), var(--neon-purple));">
+                        <div class="bar-value">65%</div>
+                    </div>
+                    <div class="bar-label">Active Creators</div>
+                </div>
+                <div class="bar-wrapper">
+                    <div class="bar" style="height: 40%; background: linear-gradient(to top, rgba(57, 255, 20, 0.2), var(--neon-green));">
+                        <div class="bar-value">40%</div>
+                    </div>
+                    <div class="bar-label">Out of State</div>
+                </div>
+                <div class="bar-wrapper">
+                    <div class="bar" style="height: 75%; background: linear-gradient(to top, rgba(255, 215, 0, 0.2), var(--neon-gold));">
+                        <div class="bar-value">75%</div>
+                    </div>
+                    <div class="bar-label">Tech Engaged</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: VENUES -->
+        <div class="slide" id="slide-8">
+            <h2 class="slide-title">WORLD-CLASS VENUES</h2>
+            <div style="text-align: center; color: var(--neon-green); margin-bottom: 20px; font-family: var(--font-heading);">808-SHAPED VENUE LAYOUT WITH NEON LIGHTING — SAT VIEW LIVE</div>
+            
+            <div class="grid-3">
+                <div class="card" style="grid-column: span 3; border-color: var(--neon-cyan); background: rgba(0, 245, 255, 0.05);">
+                    <h3 style="color: var(--neon-cyan);">PRIMARY: MIDFLORIDA CREDIT UNION AMPHITHEATRE</h3>
+                    <p>Tampa, FL — HardRock / Fairgrounds. The massive main stage for our 8 headliners, aerial drone performances, and 20,000+ attendees. Features expansive grounds for the Battle Octagons and vendor villages.</p>
+                </div>
+                
+                <div class="card">
+                    <h3>SECONDARY HUB</h3>
+                    <p style="color: var(--neon-purple); font-family: var(--font-heading); margin-bottom: 10px;">ATLANTA CONVENTION CENTER</p>
+                    <p>Atlanta, GA. The central hub for the massive indoor tech expo, VR experiences, and the Sci-Fi Cosplay Ball.</p>
+                </div>
+                
+                <div class="card">
+                    <h3>EDUCATION CENTER</h3>
+                    <p style="color: var(--neon-gold); font-family: var(--font-heading); margin-bottom: 10px;">PATCHWERK STUDIOS</p>
+                    <p>1094 Hemphill Ave, Atlanta, GA. The legendary facility hosting our Producer Masterclasses & VIP Experiences.</p>
+                </div>
+                
+                <div class="card">
+                    <h3>EXCLUSIVE ZONES</h3>
+                    <p style="color: var(--neon-red); font-family: var(--font-heading); margin-bottom: 10px;">SECRET SPEAKEASY & KILL BILL HOTEL</p>
+                    <p>Password-required hidden venue for surprise performances, and the Tokyo Japan Kill Bill Hotel for the official staff after-party.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: PATCHWERK VR -->
+        <div class="slide" id="slide-9">
+            <h2 class="slide-title" style="margin-bottom: 10px;">PATCHWERK STUDIOS — VR SCAN LAYOUT</h2>
+            <div style="text-align: center; color: var(--text-muted); margin-bottom: 20px;">1094 Hemphill Ave, Atlanta, GA 30318</div>
+            
+            <div class="vr-layout">
+                <div class="vr-scan-line"></div>
+                
+                <div class="room" style="top: 10%; left: 5%; width: 40%; height: 40%;">
+                    STUDIO A<br>(SSL 9000 J)<br><span style="font-size: 0.7rem; color: #fff;">Main Tracking / Live Room</span>
+                </div>
+                
+                <div class="room" style="top: 10%; right: 5%; width: 45%; height: 30%;">
+                    STUDIO B<br>(SSL 4000 G+)<br><span style="font-size: 0.7rem; color: #fff;">Mixing & Vocal Tracking</span>
+                </div>
+                
+                <div class="room" style="top: 45%; right: 5%; width: 20%; height: 20%;">
+                    VOCAL SUITES
+                </div>
+                
+                <div class="room" style="top: 55%; left: 5%; width: 25%; height: 35%;">
+                    CONTROL ROOM
+                </div>
+                
+                <div class="room" style="top: 70%; right: 30%; width: 35%; height: 20%;">
+                    NETWORKING LOUNGE
+                </div>
+                
+                <div class="room highlight" style="top: 55%; left: 35%; width: 30%; height: 35%;">
+                    DRIP FEST<br>ACTIVATION ZONE<br>
+                    <span style="color: var(--neon-cyan); font-size: 0.7rem; margin-top: 5px; display: block;">PRODUCER MASTERCLASS AREA</span>
+                </div>
+                
+                <div class="room highlight" style="top: 45%; right: 30%; width: 15%; height: 20%; border-color: var(--neon-cyan); color: var(--neon-cyan);">
+                    VR EXP<br>STATION
+                </div>
+            </div>
+            
+            <div class="grid-4" style="margin-top: 20px; font-size: 0.9rem; text-align: center; color: var(--text-muted);">
+                <div>📞 (404) 874-9880</div>
+                <div>✉️ pwr@patchwerk.com</div>
+                <div>👤 Osman@patchWerk.com</div>
+                <div>🌐 www.patchwerk.com</div>
+            </div>
+            
+            <div class="ticker-wrap">
+                <div class="ticker">
+                    808 MAFIA SIGNATURE TRACKS: Lil Uzi Vert ("XO Tour Llif3" - TM88) • Future ("March Madness" / "Wicked" / DS2 era - Southside) • Gucci Mane ("I Get the Bag" - Southside) • Offset & Cardi B ("Clout" - Southside) • Young Thug (multiple classic & recent placements - TM88 & Southside) • 808 MAFIA SIGNATURE TRACKS: Lil Uzi Vert ("XO Tour Llif3" - TM88) • Future ("March Madness" / "Wicked" / DS2 era - Southside) • Gucci Mane ("I Get the Bag" - Southside) • Offset & Cardi B ("Clout" - Southside) • Young Thug (multiple classic & recent placements - TM88 & Southside) • 808 MAFIA SIGNATURE TRACKS:
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: LINEUP -->
+        <div class="slide" id="slide-10">
+            <h2 class="slide-title">STAR-STUDDED LINEUP</h2>
+            
+            <div class="grid-2">
+                <div class="card" style="background: linear-gradient(45deg, rgba(20,20,20,1) 0%, rgba(0,245,255,0.1) 100%);">
+                    <h3 style="font-size: 2rem; color: var(--neon-cyan); text-align: center; margin-bottom: 30px;">HEADLINERS POWERED BY 808 MAFIA SOUND</h3>
+                    <div style="text-align: center; font-family: var(--font-heading); font-size: 1.5rem; line-height: 2.5;">
+                        <div>8 MAJOR ACTS PER DAY</div>
+                        <div style="color: var(--neon-purple);">MULTI-PLATINUM ARTISTS</div>
+                        <div>GLOBAL ICONS</div>
+                        <div style="color: var(--neon-gold);">SURPRISE GUESTS</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card">
+                        <h3 style="color: var(--neon-purple);">PRODUCTION TALENT</h3>
+                        <p>Exclusive appearances and masterclasses by <strong>808 Mafia core producers</strong>. Bridging the gap between global hitmakers and local rising talent.</p>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: var(--neon-green);">IMMERSIVE EXPERIENCE</h3>
+                        <p>Beyond the music: Aerial Silks & Fire Flow performances, intense Battle Octagon Competitions, and a fully immersive Audio-Visual stage production.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 11: TECH -->
+        <div class="slide" id="slide-11">
+            <h2 class="slide-title">NEXT-LEVEL ENGAGEMENT</h2>
+            <div style="text-align: center; color: var(--neon-cyan); margin-bottom: 30px; font-family: var(--font-heading);">SYSTEM.ACTIVE | DATA: 808.MAFIA | MODE: IMMERSIVE</div>
+            
+            <div class="grid-3">
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--neon-cyan);">🥽</div>
+                    <h3>VR ADVENTURE STREAMING</h3>
+                    <p>Global fans can purchase virtual tickets to experience the festival in 3D 360-degree video, moving between stages virtually.</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--neon-purple);">📱</div>
+                    <h3>AUGMENTED REALITY</h3>
+                    <p>App-based AR integration on festival grounds. Point your phone at stages for real-time artist stats, lyrics, and hidden digital art drops.</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--neon-green);">📡</div>
+                    <h3>LIVE EVENT STREAMING</h3>
+                    <p>High-fidelity multi-cam streams for Twitch and YouTube, featuring interactive chat integration displayed on massive LED walls.</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--neon-gold);">🎥</div>
+                    <h3>BTS DOCUMENTARY</h3>
+                    <p>A dedicated film crew capturing the entire journey from planning to execution, creating a premium docu-series for post-event monetization.</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--neon-red);">🔄</div>
+                    <h3>SOCIAL INTEGRATION</h3>
+                    <p>Live social media walls, custom TikTok/IG filters, and viral challenge booths scattered throughout the venue.</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--text-main);">🔳</div>
+                    <h3>QR INTERACTIVITY</h3>
+                    <p>Scannable QR codes on wristbands and installations for instant networking, schedule updates, and exclusive merchandise drops.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: MARKETING -->
+        <div class="slide" id="slide-12">
+            <h2 class="slide-title">360° MARKETING CAMPAIGN</h2>
+            
+            <div class="grid-3">
+                <div class="card" style="border-top: 4px solid var(--neon-cyan);">
+                    <h3 style="color: var(--neon-cyan); text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px;">DIGITAL CHANNELS</h3>
+                    <ul style="list-style: none; margin-top: 20px; line-height: 1.8;">
+                        <li>• Aggressive social media campaigns (IG, TikTok, X)</li>
+                        <li>• Strategic Influencer & Streamer partnerships</li>
+                        <li>• SoundCloud integration for beat battle submissions</li>
+                        <li>• Pre-event QR code scavenger hunts in major cities</li>
+                        <li>• Targeted email marketing to producer databases</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="border-top: 4px solid var(--neon-purple);">
+                    <h3 style="color: var(--neon-purple); text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px;">TRADITIONAL</h3>
+                    <ul style="list-style: none; margin-top: 20px; line-height: 1.8;">
+                        <li>• Guerrilla street teams in key markets (ATL, LA, MIA)</li>
+                        <li>• Premium Press Kits for major music publications</li>
+                        <li>• Targeted billboard ads near major recording studios</li>
+                        <li>• College campus ambassador programs</li>
+                        <li>• Radio spots on premier hip-hop stations</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="border-top: 4px solid var(--neon-gold);">
+                    <h3 style="color: var(--neon-gold); text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px;">PARTNERSHIPS</h3>
+                    <ul style="list-style: none; margin-top: 20px; line-height: 1.8;">
+                        <li>• Collaborations with local lifestyle brands</li>
+                        <li>• Media partnerships with Complex, XXL, Pitchfork</li>
+                        <li>• Hardware/Software brand sponsorships (FL Studio, Akai)</li>
+                        <li>• Cross-promotion with partner hotels and venues</li>
+                        <li>• Local arts council integrations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13: COMMUNITY -->
+        <div class="slide" id="slide-13">
+            <h2 class="slide-title">GIVING BACK TO THE COMMUNITY</h2>
+            
+            <div class="grid-2">
+                <div class="card" style="background: rgba(0, 245, 255, 0.05); border-color: var(--neon-cyan);">
+                    <h3 style="font-size: 2rem; color: var(--neon-cyan); margin-bottom: 20px;">MISSION IMPACT</h3>
+                    <p style="font-size: 1.2rem; margin-bottom: 15px;"><strong>SUPPORTING LOCAL ART:</strong> Providing a massive platform for local live art, music, and flow arts communities to showcase their talents.</p>
+                    <p style="font-size: 1.2rem; margin-bottom: 15px;"><strong>TALENT EXPOSURE:</strong> Creating direct pathways for local, undiscovered talent to interact with and be heard by global artists and executives.</p>
+                    <p style="font-size: 1.2rem;"><strong>ECONOMIC GROWTH:</strong> Creating hundreds of jobs by strictly utilizing local I.A.T.S.E UNION crews for stage, sound, and lighting production.</p>
+                </div>
+                
+                <div class="card" style="background: rgba(191, 0, 255, 0.05); border-color: var(--neon-purple);">
+                    <h3 style="font-size: 2rem; color: var(--neon-purple); margin-bottom: 20px;">LONG-TERM VISION</h3>
+                    <p style="font-size: 1.2rem; margin-bottom: 15px;"><strong>YOUTH EMPOWERMENT:</strong> Extensive volunteer opportunities and mentorship programs for students interested in event production and music business.</p>
+                    <p style="font-size: 1.2rem; margin-bottom: 15px;"><strong>SUSTAINABLE GROWTH:</strong> Establishing an annual recurring event that brings consistent tourism and cultural capital to the host city.</p>
+                    <p style="font-size: 1.2rem;"><strong>GLOBAL REACH:</strong> Expanding into year-round tours and a global talent search, taking the community ethos worldwide.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 14: REVENUE -->
+        <div class="slide" id="slide-14">
+            <h2 class="slide-title">REVENUE STREAMS</h2>
+            
+            <div class="donut-container">
+                <div class="donut-chart">
+                    <div class="donut-hole">
+                        <div style="font-family: var(--font-heading); font-size: 2rem; color: var(--text-main);">100%</div>
+                        <div style="color: var(--text-muted);">DIVERSIFIED</div>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--neon-cyan);"></div>
+                        <span><strong>45%</strong> — Ticket Sales (GA, VIP, VR)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--neon-purple);"></div>
+                        <span><strong>30%</strong> — Corporate Sponsorships</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--neon-gold);"></div>
+                        <span><strong>15%</strong> — Exclusive Merchandise</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--neon-green);"></div>
+                        <span><strong>5%</strong> — Vendor & Food Truck Fees</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--neon-red);"></div>
+                        <span><strong>3%</strong> — Media & Streaming Rights</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #555;"></div>
+                        <span><strong>2%</strong> — Hotel Commissions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 15: FINANCIALS -->
+        <div class="slide" id="slide-15">
+            <h2 class="slide-title">STRONG OUTLOOK</h2>
+            
+            <div class="grid-4" style="margin-bottom: 40px;">
+                <div class="stat-box">
+                    <div class="stat-value">$54M</div>
+                    <div class="stat-label">Year 1 Revenue</div>
+                </div>
+                <div class="stat-box" style="border-top-color: var(--neon-purple);">
+                    <div class="stat-value">28%</div>
+                    <div class="stat-label">Profit Margin</div>
+                </div>
+                <div class="stat-box" style="border-top-color: var(--neon-green);">
+                    <div class="stat-value">150%</div>
+                    <div class="stat-label">3-Year Growth</div>
+                </div>
+                <div class="stat-box" style="border-top-color: var(--neon-gold);">
+                    <div class="stat-value">MO. 9</div>
+                    <div class="stat-label">Break-Even Point</div>
+                </div>
+            </div>
+
+            <div style="height: 250px; display: flex; align-items: flex-end; gap: 40px; justify-content: center; border-bottom: 1px solid #333; padding-bottom: 0;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="width: 100px; height: 100px; background: rgba(0, 245, 255, 0.5); border: 1px solid var(--neon-cyan);"></div>
+                    <div style="font-family: var(--font-heading);">YEAR 1</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="width: 100px; height: 160px; background: rgba(191, 0, 255, 0.5); border: 1px solid var(--neon-purple);"></div>
+                    <div style="font-family: var(--font-heading);">YEAR 2</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="width: 100px; height: 250px; background: rgba(57, 255, 20, 0.5); border: 1px solid var(--neon-green);"></div>
+                    <div style="font-family: var(--font-heading);">YEAR 3</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 16: SPONSORSHIP -->
+        <div class="slide" id="slide-16">
+            <h2 class="slide-title">PARTNER WITH US</h2>
+            
+            <div class="grid-4">
+                <div class="card" style="border: 2px solid #e5e4e2; background: rgba(229, 228, 226, 0.05);">
+                    <h3 style="color: #e5e4e2; text-align: center; font-size: 1.8rem;">PLATINUM</h3>
+                    <div style="text-align: center; color: var(--neon-green); margin-bottom: 15px;">TARGET: $1M+</div>
+                    <ul style="list-style: none; line-height: 1.6; font-size: 0.9rem;">
+                        <li>✓ Title Sponsor Status</li>
+                        <li>✓ Main Stage Naming Rights</li>
+                        <li>✓ 50 All-Access VIP Passes</li>
+                        <li>✓ Full Brand Integration</li>
+                        <li>✓ Custom VR Activation</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="border: 2px solid var(--neon-gold); background: rgba(255, 215, 0, 0.05);">
+                    <h3 style="color: var(--neon-gold); text-align: center; font-size: 1.8rem;">GOLD</h3>
+                    <div style="text-align: center; color: var(--text-muted); margin-bottom: 15px;">TARGET: AUDIO BRANDS</div>
+                    <ul style="list-style: none; line-height: 1.6; font-size: 0.9rem;">
+                        <li>✓ Secondary Stage Sponsor</li>
+                        <li>✓ Premium 20x20 Booth Space</li>
+                        <li>✓ 25 VIP Passes</li>
+                        <li>✓ Dedicated Social Media Features</li>
+                        <li>✓ Masterclass Integration</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="border: 2px solid #c0c0c0; background: rgba(192, 192, 192, 0.05);">
+                    <h3 style="color: #c0c0c0; text-align: center; font-size: 1.8rem;">SILVER</h3>
+                    <div style="text-align: center; color: var(--text-muted); margin-bottom: 15px;">AREA SPONSOR</div>
+                    <ul style="list-style: none; line-height: 1.6; font-size: 0.9rem;">
+                        <li>✓ Specific Area Naming (e.g. Lounge)</li>
+                        <li>✓ 10x10 Booth Space</li>
+                        <li>✓ 10 VIP Passes</li>
+                        <li>✓ Logo on Promotional Materials</li>
+                        <li>✓ Website Integration</li>
+                    </ul>
+                </div>
+                
+                <div class="card" style="border: 2px solid #cd7f32; background: rgba(205, 127, 50, 0.05);">
+                    <h3 style="color: #cd7f32; text-align: center; font-size: 1.8rem;">BRONZE</h3>
+                    <div style="text-align: center; color: var(--text-muted); margin-bottom: 15px;">VENDOR TIER</div>
+                    <ul style="list-style: none; line-height: 1.6; font-size: 0.9rem;">
+                        <li>✓ Standard Vendor Booth</li>
+                        <li>✓ 4 GA Passes</li>
+                        <li>✓ Digital Marketing Inclusion</li>
+                        <li>✓ Event Guide Listing</li>
+                        <li>✓ On-site Sampling Rights</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 40px;">
+                <div style="font-family: var(--font-heading); font-size: 2rem; color: var(--neon-cyan); letter-spacing: 5px;">JOIN THE MISSION</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 17: ESCROW -->
+        <div class="slide" id="slide-17">
+            <h2 class="slide-title" style="font-size: 2.8rem;">FINANCIAL INTEGRITY — THE $1M ESCROW ROADMAP</h2>
+            
+            <div class="grid-2">
+                <div class="card" style="border-left: 4px solid var(--neon-green);">
+                    <h3 style="color: var(--neon-green);">01. ESCROW & PROOF OF FUNDS</h3>
+                    <p>Corporate Resolution + Third-Party Escrow Account required for all A-list talent booking. This ensures absolute financial security and guarantees artist payments, building unbreakable trust with major agencies.</p>
+                </div>
+                
+                <div class="card" style="border-left: 4px solid var(--neon-cyan);">
+                    <h3 style="color: var(--neon-cyan);">02. TIER-1 SPONSORSHIP ACTIVATION</h3>
+                    <p>Master Services Agreement (MSA) + NDA required. Sponsors are granted full transparency to audit 808mafia.live metrics, ensuring ROI tracking and data-driven partnership execution.</p>
+                </div>
+                
+                <div class="card" style="border-left: 4px solid var(--neon-purple);">
+                    <h3 style="color: var(--neon-purple);">03. HOTEL SPONSORSHIP & ATTRITION</h3>
+                    <p>Strict Room Block Agreements implemented with Force Majeure & Mitigation Clauses. Protects the festival from liability while securing premium accommodations for talent and VIPs.</p>
+                </div>
+                
+                <div class="card" style="border-left: 4px solid var(--neon-red);">
+                    <h3 style="color: var(--neon-red);">04. LEGAL INFRASTRUCTURE</h3>
+                    <p>Comprehensive General Liability Insurance with $2M–$5M coverage (non-negotiable). Full compliance with city ordinances, union regulations, and venue requirements.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 18: GROWTH -->
+        <div class="slide" id="slide-18">
+            <h2 class="slide-title">GROWTH STRATEGY</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 30px; max-width: 900px; margin: 0 auto;">
+                <div class="card" style="display: flex; align-items: center; gap: 30px; background: rgba(0, 245, 255, 0.1); border-color: var(--neon-cyan);">
+                    <div style="font-size: 3rem; font-family: var(--font-heading); color: var(--neon-cyan); min-width: 150px; text-align: center;">YEAR 1</div>
+                    <div>
+                        <h3 style="color: var(--text-main); margin-bottom: 10px;">ESTABLISH BRAND IN ATLANTA / TAMPA</h3>
+                        <p>Solidify local market presence, build the core community, execute a flawless proof-of-concept event, and capture high-quality media for future marketing.</p>
+                    </div>
+                </div>
+                
+                <div class="card" style="display: flex; align-items: center; gap: 30px; background: rgba(191, 0, 255, 0.1); border-color: var(--neon-purple);">
+                    <div style="font-size: 3rem; font-family: var(--font-heading); color: var(--neon-purple); min-width: 150px; text-align: center;">YEAR 2-3</div>
+                    <div>
+                        <h3 style="color: var(--text-main); margin-bottom: 10px;">MULTI-CITY EXPANSION</h3>
+                        <p>Scale the proven model to major entertainment hubs: Los Angeles, New York City, and Miami. Introduce regional beat battle qualifiers leading to the main event.</p>
+                    </div>
+                </div>
+                
+                <div class="card" style="display: flex; align-items: center; gap: 30px; background: rgba(255, 215, 0, 0.1); border-color: var(--neon-gold);">
+                    <div style="font-size: 3rem; font-family: var(--font-heading); color: var(--neon-gold); min-width: 150px; text-align: center;">YEAR 4+</div>
+                    <div>
+                        <h3 style="color: var(--text-main); margin-bottom: 10px;">INTERNATIONAL EXPANSION</h3>
+                        <p>Launch the global tour and franchise licensing model. Drip Fest becomes a worldwide recognized brand, hosting events in Europe, Asia, and South America.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 19: TEAM -->
+        <div class="slide" id="slide-19">
+            <h2 class="slide-title">LED BY INDUSTRY</h2>
+            
+            <div class="grid-2" style="margin-bottom: 40px;">
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: #222; border: 3px solid var(--neon-cyan); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🧠</div>
+                    <h3 style="color: var(--neon-cyan); font-size: 1.8rem;">SwampGod</h3>
+                    <div style="color: var(--text-muted); font-family: var(--font-heading); margin-bottom: 20px;">EVENT PRODUCTION LEAD / FOUNDER</div>
+                    <p>Merging deep music industry connections with high-energy event mastery. The visionary architect behind the Drip Fest experience, ensuring authentic culture meets professional execution.</p>
+                </div>
+                
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: #222; border: 3px solid var(--neon-purple); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 3rem;">👑</div>
+                    <h3 style="color: var(--neon-purple); font-size: 1.8rem;">$LUGG</h3>
+                    <div style="color: var(--text-muted); font-family: var(--font-heading); margin-bottom: 20px;">BRAND STRATEGY & MARKETING</div>
+                    <p>Expert in community engagement. Driving the brand development, digital footprint, and market penetration strategies for the festival.</p>
+                </div>
+            </div>
+            
+            <div class="card" style="text-align: center; background: transparent; border-style: dashed;">
+                <h3 style="color: var(--neon-gold);">ADVISORY BOARD</h3>
+                <p>Supported by a strategic network of industry heavyweights, multi-platinum producers, and technical advisors ensuring scalable growth and flawless execution.</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 20: CTA -->
+        <div class="slide" id="slide-20">
+            <h2 class="slide-title">JOIN THE DRIP FEST REVOLUTION</h2>
+            <p style="text-align: center; font-size: 1.3rem; max-width: 800px; margin: 0 auto 40px;">Become a Founding Sponsor and partner with us to create a legendary experience that bridges the gap between music and technology.</p>
+            
+            <div class="cta-buttons">
+                <button class="btn-cta btn-primary">BECOME A SPONSOR</button>
+                <button class="btn-cta btn-secondary">PARTNER AS A VENUE</button>
+                <button class="btn-cta btn-primary" style="border-color: var(--neon-green); color: var(--neon-green);">JOIN OUR MEDIA TEAM</button>
+            </div>
+            
+            <div class="contact-box">
+                <h3 style="color: var(--neon-cyan); font-size: 1.5rem; margin-bottom: 20px;">SWAMPGOD — FOUNDER & VISIONARY</h3>
+                <p>Email: <span class="contact-highlight">sWampgOd@808Mafia.Live</span></p>
+                <p>Phone: <span class="contact-highlight">(808) 825-5311</span></p>
+                <p>Website: <a href="https://808mafia.live" target="_blank" class="contact-highlight">808Mafia.Live</a> • <a href="https://808mafia.io" target="_blank" class="contact-highlight">808Mafia.io</a></p>
+            </div>
+
+            <button class="back-btn" onclick="currentSlide=2; updateUI();">BACK TO SLIDE 1 (COVER)</button>
+            
+            <div style="text-align: center; margin-top: 40px; font-family: var(--font-heading); font-size: 1.5rem; color: var(--neon-gold); letter-spacing: 3px;">
+                LET'S CREATE SOMETHING LEGENDARY TOGETHER
+            </div>
+            
+            <div style="position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center; font-size: 1rem; color: #777;">
+                808 MAFIA EVENTS — OFFICIAL PITCH DECK
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 20;
+        let ndaAccepted = false;
+
+        function updateUI() {
+            document.getElementById('slide-counter').innerText = 
+                (currentSlide < 10 ? '0' + currentSlide : currentSlide) + ' / ' + totalSlides;
+            
+            const progress = ((currentSlide - 1) / (totalSlides - 1)) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            
+            document.getElementById('btn-prev').disabled = (currentSlide === 1);
+            document.getElementById('btn-next').disabled = (currentSlide === totalSlides);
+            
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                if (index + 1 === currentSlide) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+        }
+
+        function acceptNDA() {
+            ndaAccepted = true;
+            document.getElementById('ui-layer').style.display = 'block';
+            const audio = document.getElementById('bgm');
+            if (audio) {
+                audio.volume = 0.12;
+                audio.play().catch(() => {});
+            }
+            nextSlide();
+        }
+
+        function nextSlide() {
+            if (currentSlide === 1 && !ndaAccepted) return;
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateUI();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateUI();
+                if (currentSlide === 1) {
+                    document.getElementById('ui-layer').style.display = 'none';
+                    ndaAccepted = false;
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateUI();
+    </script>
+
+</body>
+</html>

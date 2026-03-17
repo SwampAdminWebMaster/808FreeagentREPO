@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>808 Mafia OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basic body styling */
+        body {
+            font-family: 'monospace', sans-serif; /* Monospace font for the OS feel */
+            overflow: hidden; /* Prevent scrollbars on the main body */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            background-color: black; /* Ensure body background is black */
+        }
+        /* Custom animation for pulsing modal border */
+        @keyframes pulse-themed-border {
+          0% { box-shadow: 0 0 3px 1px rgba(255, 0, 0, 0.6), 0 0 6px 3px rgba(236, 72, 153, 0.5), 0 0 9px 5px rgba(168, 85, 247, 0.4), 0 0 1px 1px rgba(192, 192, 192, 0.7); }
+          50% { box-shadow: 0 0 6px 2px rgba(255, 0, 0, 0.4), 0 0 12px 6px rgba(236, 72, 153, 0.3), 0 0 18px 10px rgba(168, 85, 247, 0.2), 0 0 2px 2px rgba(220, 220, 220, 0.5); }
+          100% { box-shadow: 0 0 3px 1px rgba(255, 0, 0, 0.6), 0 0 6px 3px rgba(236, 72, 153, 0.5), 0 0 9px 5px rgba(168, 85, 247, 0.4), 0 0 1px 1px rgba(192, 192, 192, 0.7); }
+        }
+        .animate-themed-pulse-border {
+          animation: pulse-themed-border 2.5s infinite ease-in-out;
+          border: 1px solid rgba(220, 220, 220, 0.6); /* Base border */
+        }
+        /* Ensure modals and overlays have correct stacking order */
+        .modal-container { z-index: 50; } /* Individual modal window */
+        .modal-overlay { z-index: 40; } /* Dimmed background for standard modals */
+        .confirmation-modal-overlay { z-index: 60; } /* Shutdown confirmation */
+        .hidden-log-overlay { z-index: 55; } /* Boot log overlay */
+        .shutdown-overlay { z-index: 100; } /* Final shutdown screen */
+        #matrix-canvas { z-index: 0; } /* Matrix background behind everything */
+        #app-root { z-index: 10; } /* Main UI container above matrix */
+        /* Basic icon replacement styling */
+        .icon-placeholder {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            line-height: 1em;
+            text-align: center;
+            font-size: inherit; /* Match surrounding text size */
+            margin-right: 0.25em; /* Spacing */
+            vertical-align: middle; /* Align icons better with text */
+        }
+        /* Hide scrollbar for modal content but allow scrolling */
+        .modal-content-area::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+        .modal-content-area {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+            overflow-y: auto;
+            /* Ensure iframe content can be seen */
+            display: flex; /* Use flex to make iframe fit */
+            flex-direction: column; /* Stack iframe and potential attribution */
+        }
+        /* Adjust iframe height */
+        .modal-content-area > iframe {
+            flex-grow: 1; /* Allow iframe to grow */
+            flex-shrink: 1; /* Allow iframe to shrink if needed */
+            border: none; /* Remove iframe border */
+            min-height: 300px; /* Minimum height */
+        }
+        /* Style for the SoundCloud attribution div */
+         .soundcloud-attribution {
+            font-size: 10px;
+            color: #cccccc;
+            line-break: anywhere;
+            word-break: normal;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-family: Interstate, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Garuda, Verdana, Tahoma, sans-serif;
+            font-weight: 100;
+            padding: 5px;
+            background-color: black; /* Match modal background */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .soundcloud-attribution a {
+            color: #cccccc;
+            text-decoration: none;
+        }
+        /* Line clamp for desktop icon labels (still needed for structure) */
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+        /* Ensure alert boxes are styled somewhat thematically */
+        /* Note: Styling native alert() is very limited */
+        /* This is more a placeholder for potential future custom alert implementation */
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #ffcc00;
+            padding: 15px;
+            border: 1px solid #ffcc00;
+            border-radius: 5px;
+            z-index: 200;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        /* Styling for window control buttons */
+        .window-control-button {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px; /* Full */
+            margin-left: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1;
+            transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+            cursor: pointer;
+            color: #e5e7eb; /* gray-200 */
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .window-control-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .window-control-button.close:hover {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
+        .window-control-button.maximize:hover {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+         .window-control-button.minimize:hover {
+            background-color: #f59e0b; /* amber-500 */
+            color: white;
+        }
+        /* Modal maximized state */
+        .modal-container.maximized {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100% - 48px) !important; /* Full height minus taskbar */
+            transform: none !important;
+            border-radius: 0; /* Remove rounded corners when maximized */
+            cursor: default !important; /* No grabbing when maximized */
+        }
+        .modal-container.maximized .modal-header {
+             cursor: default !important; /* No grabbing when maximized */
+        }
+        /* Styling for the highlighted Tickets icon */
+        #icon-link_eventbrite {
+            border: 2px solid #f59e0b; /* Amber border */
+            box-shadow: 0 0 15px 5px rgba(245, 158, 11, 0.6); /* Amber glow */
+        }
+        #icon-link_eventbrite:hover {
+             background-color: rgba(245, 158, 11, 0.2); /* Light amber background on hover */
+        }
+    </style>
+</head>
+<body class="bg-black text-red-500">
+    <div id="app-root"></div>
+    <canvas id="matrix-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+    <script>
+        // --- Configuration ---
+        const MATRIX_CHARS = "80";
+        const MATRIX_FONT_SIZE = 14;
+        const MATRIX_SPEED = 90; // Milliseconds between matrix updates
+        const MATRIX_FADE_FACTOR = 0.15; // Controls how quickly the trail fades (0-1)
+        const MATRIX_COLOR = 'rgba(255, 0, 0, 0.5)'; // Red color for matrix characters
+        const AGENT_ID_LENGTH = 8; // Length of the generated Agent ID
+        const ICON_SIZE_CLASS = 'w-20 h-20'; // Tailwind class for desktop icon size
+        const NOTE_EMAIL_TARGET = "808MAFIALIVE@GMAIL.COM"; // Simulated target email
+        const PADDING = 16; // General padding from screen edges in pixels
+        const EVENT_OVERVIEW_PASSWORD = '808'; // Password for Event Overview document
+        // Permission Denied Message (Used for locked features)
+        const PERMISSION_DENIED_MESSAGE = "Access Denied: Your Free Agent ID does not grant the required permissions for this feature, or access has been administratively locked. Please contact your Network Administrator for permission reevaluation.";
+        // Boot Messages displayed during startup
+        const VERBOSE_BOOT_MESSAGES = [
+            "Initializing 808 Core Systems...",
+            "Loading Bass Kernels v1.1 [OK]",
+            "Mounting Filesystem /dev/snd01...",
+            "Checking Drum Machine Integrity...",
+            "Syncing MIDI Clock [OK]",
+            "Loading Sequencer Modules...",
+            "Applying Matrix Filters v2.2...",
+            "Loading Event Data Files...",
+            "Initializing Desktop Environment...",
+            "Boot Sequence Complete. Welcome to 808 Mafia OS.",
+        ];
+        // Shutdown Messages displayed during shutdown
+        const SHUTDOWN_MESSAGES = [
+            "Broadcasting shutdown signal...",
+            "Stopping services: midi_sync, sequencer_daemon, matrix_filter...",
+            "Unmounting filesystems...",
+            "/dev/snd01 unmounted.",
+            "/ unmounted.",
+            "System will power off now.",
+            "Redirecting to 808mafia.io...", // Updated message
+        ];
+        const SHUTDOWN_DELAY = 300; // Milliseconds between shutdown messages
+
+        // Data for documents inside the 'Event Docs' folder
+        const eventDocuments = [
+            // UPDATED Event Overview content
+            { id: 'event_overview', label: 'Event_Overview.txt', icon: '📄', type: 'file', content: `**808 MAFIA EVENTS - Sluggfest / Dripfest Overview 2025**\n\nSuper producer conference and $LUGGFEST Main Event and Performances.\n\n**Schedule:**\n* Pre-party and talent briefing: TBA\n* Admin meeting: TBA\n* March 28th: 1st Annual Launch Party (Theme: Drip Fest)\n* October 31st, November 1st, 2nd: DRIP FEST / $LUGGFEST (Main Event)\n * Hours: October 31st, 8:08 AM - 2:08 AM\n* November 8th: Arigato Staff After Party\n` }, // Removed Tokyo/Kill Bill part
+            { id: 'mission_statement', label: 'Mission_Statement.txt', icon: '📄', type: 'file', content: `**Mission & Significance**\n\nTo give back to the live art, music, dance, flow arts, and fashion communities on a local level, while providing local talent exposure to the world's best global artists and producers. This event will be held annually and grow to become a nationwide global talent search with multiple tours and events year-round.\n\n**Significance:** To inform and gather all forms of artist and producer talents along with enthusiasts and fans worldwide for an annual conference on Halloween. To show respect for the dead in a non-traditional gathering celebrating life and death respectfully, with no bias to specific religious or belief systems.` },
+            { id: 'event_details', label: 'Event_Details.txt', icon: '📄', type: 'file', content: `**Event Details (Main Event: Oct 31 - Nov 2)**\n\n* **Venue:** HardRock / Fairgrounds / Amphitheater (Specific location TBD)\n* **Theme:** Anti Hero/Hero SciFi Space Adventure, 90s Beach Vibes, Cosplay Ball Pool Party (with sci-fi alien planet beach resort themes). Aligning with the 808 Mafia brand for growth and expansion.\n* **Target Audience:** Fans aged 18-28. Also includes major and local studios, music artists, dance/live performers, fashion designers/brands.\n* **Duration:** 3-day total major event dates with free agent early bird access. (2-13 HR work days for crew/performers).\n\n**Event Program & Features:**\n* **Headliners:** 8 headliners each day.\n* **Conference Elements:** Super producer conference & artist showcase, Clinics & master classes, 808 MAFIA producer ONEonONE Q&A and group meet & greets.\n* **Performances & Activities:** Silks and Aerial performers, Fire Flow performers, Twerk team performance/battles/awards, 8 Battle Octagon rings (808 shape) for local artists/DJs/dancers/rap battles, Model runway & fashion show.\n* **Interactive Experiences:** Live streams, VR classes, VR adventure streaming interactive augmented reality experience.\n* **Parties:** Free Agent Blok Party Pool Parties (all hotels, 24/7), Secret speakeasy-style performance (password required).\n* **Media:** Behind-the-scenes documentary, Promotional media (before/after), Interviews (crew/talent).\n` },
+            // { id: 'marketing_promo', label: 'Marketing_Promo.txt', icon: '📄', type: 'file', content: `**Marketing and Promotion**\n\n* **Strategies:** Create buzz and generate attendance via social media campaigns, collaborations, influencer outreach, traditional marketing.\n* **Platforms:** Facebook, Instagram, Soundcloud (social media hype campaigns).\n* **Materials:** Online Flyers, ads, Soundcloud sponsorship, QR codes, VR promotion events/classes/master classes (with interactive AR layer at events), Press kits (sent to local news media).\n* **Teams:** Street teams, local I.A.T.S.E UNION crews, Local Volunteers.\n` }, // <-- REMOVED THIS ITEM
+            { id: 'contact_info', label: 'Contact_Info.txt', icon: '📄', type: 'file', content: `**808 MAFIA EVENTS - Contact & Leadership**\n\n**Primary Contact:**\n* Name: StikiDaSwampGod\n* Phone: 808.850.3519\n* Email: Stk808info@gmail.com\n\n**Leadership:**\n* CEO: STiKi-DaSwampGod\n* CEO: $LUGG\n\n**Secondary Contact Listing:**\n* Cell: (970)-638-3084\n* Email: Stk808info@gmail.com\n` }
+        ];
+
+        // Data defining the items appearing on the desktop
+        const desktopItemsData = [
+            { id: 'soundcloud_player', label: 'MediaPlayer.app', icon: '▶️', type: 'app' },
+            { id: 'youtube_player', label: 'VideoPlayer.app', icon: '🎬', type: 'app' },
+            { id: 'documents_folder', label: 'Event Docs', icon: '📁', type: 'folder', content: 'Contains event planning documents.' },
+            { id: 'link_808mafia_io', label: '808MAFIA.IO', icon: '🌐', url: 'https://808mafia.io', type: 'link' },
+            { id: 'link_808mafia_live', label: '808MAFIA.LIVE', icon: '🌐', url: 'https://808mafia.live', type: 'link', isVisible: false },
+            { id: 'link_eventbrite', label: 'GET TICKETS!', icon: '🎟️', url: 'https://www.eventbrite.com/e/808-mafia-drippfest-digital-vr-access-pass-tickets-1265666916819', type: 'link' },
+            { id: 'network', label: 'Network', icon: '📶', type: 'system' },
+            { id: 'trash', label: 'Trash', icon: '🗑️', type: 'system' },
+        ].map(item => ({ ...item, isVisible: item.isVisible !== false }));
+
+        // --- Global State Variables ---
+        let appState = 'booting';
+        let credentials = { email: null, agentId: null };
+        let isStartMenuOpen = false;
+        let currentModal = {
+            isOpen: false, title: '', content: '', type: 'file', id: null,
+            isMaximized: false, originalTransform: '', originalWidth: '', originalHeight: '', originalTop: '', originalLeft: ''
+        };
+        let isNoteModalOpen = false;
+        let showHiddenLog = false;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let draggedModal = null;
+
+        // --- DOM Element References ---
+        const appRoot = document.getElementById('app-root');
+        const matrixCanvas = document.getElementById('matrix-canvas');
+        const matrixCtx = matrixCanvas.getContext('2d');
+
+        // --- Helper Functions ---
+        const generateAgentId = (length) => {
+            let result = '';
+            const characters = '0123456789';
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        };
+
+        const parseContent = (content) => {
+            if (typeof content !== 'string') return '';
+            // Basic markdown-like parsing for display
+            return content.split('\n').map(line => {
+                line = line.trim();
+                if (line.startsWith('**') && line.endsWith('**')) {
+                    // Bold text (usually titles/headers)
+                    return `<strong class="block mb-1 text-red-400 font-bold text-base">${line.substring(2, line.length - 2)}</strong>`;
+                }
+                if (line.startsWith('* ')) {
+                    // List items
+                    return `<li class="ml-5 list-disc text-gray-300">${line.substring(2)}</li>`;
+                }
+                // Regular paragraphs
+                return line ? `<p class="mb-2 text-gray-300">${line}</p>` : '<br>'; // Add line break for empty lines
+            }).join('');
+        };
+
+        // --- Matrix Background Logic ---
+        let matrixAnimationFrameId;
+        let matrixDrops = [];
+        let matrixResizeTimeout;
+        let matrixLastTimestamp = 0;
+
+        // Initialize or reset the matrix canvas dimensions and drop positions
+        const setupMatrix = () => {
+            if (!matrixCanvas) return;
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+            // Adjust the number of columns based on the new width
+            const newColumns = Math.max(1, Math.floor(matrixCanvas.width / MATRIX_FONT_SIZE));
+            // Reset drop positions, potentially adding/removing columns
+            matrixDrops = Array(newColumns).fill(1);
+        };
+
+        // Debounce resize handler to avoid excessive recalculations
+        const handleMatrixResize = () => {
+            clearTimeout(matrixResizeTimeout);
+            matrixResizeTimeout = setTimeout(setupMatrix, 250);
+        };
+
+        // Draw a single frame of the matrix effect
+        const drawMatrix = () => {
+            if (!matrixCtx || !matrixCanvas) return;
+
+            // Draw a semi-transparent black rectangle to create the fading trail effect
+            matrixCtx.fillStyle = `rgba(0, 0, 0, ${MATRIX_FADE_FACTOR})`;
+            matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+
+            // Set color and font for the matrix characters
+            matrixCtx.fillStyle = MATRIX_COLOR;
+            matrixCtx.font = `${MATRIX_FONT_SIZE}px monospace`;
+
+            // Iterate over each column (drop)
+            matrixDrops.forEach((y, i) => {
+                // Select a random character from the defined set
+                const text = MATRIX_CHARS.charAt(Math.floor(Math.random() * MATRIX_CHARS.length));
+                // Calculate the x position based on the column index
+                const x = i * MATRIX_FONT_SIZE;
+                // Draw the character at the current y position for this column
+                matrixCtx.fillText(text, x, y * MATRIX_FONT_SIZE);
+
+                // Reset the drop to the top if it goes off-screen and randomly
+                if (y * MATRIX_FONT_SIZE > matrixCanvas.height && Math.random() > 0.975) {
+                    matrixDrops[i] = 0;
+                }
+
+                // Increment the y position for the next frame, with a small chance of staying put
+                 if(matrixDrops[i] > 0 || Math.random() > 0.1) { // Only advance if not already at 0 or randomly pause
+                     matrixDrops[i]++;
+                 }
+            });
+        };
+
+        // Animation loop using requestAnimationFrame
+        const animateMatrix = (timestamp) => {
+            const deltaTime = timestamp - matrixLastTimestamp;
+            // Only draw if enough time has passed based on MATRIX_SPEED
+            if (deltaTime > MATRIX_SPEED) {
+                drawMatrix();
+                matrixLastTimestamp = timestamp; // Update last timestamp
+            }
+            // Request the next frame
+            matrixAnimationFrameId = requestAnimationFrame(animateMatrix);
+        };
+
+        // Start the matrix animation
+        const startMatrix = () => {
+            setupMatrix(); // Initial setup
+            animateMatrix(0); // Start the loop
+            window.addEventListener('resize', handleMatrixResize); // Listen for resize events
+        };
+
+        // Stop the matrix animation and clean up
+        const stopMatrix = () => {
+             cancelAnimationFrame(matrixAnimationFrameId); // Stop the loop
+             window.removeEventListener('resize', handleMatrixResize); // Remove listener
+             clearTimeout(matrixResizeTimeout); // Clear any pending resize timeout
+        };
+
+
+        // --- Modal Dragging Logic ---
+        const handleModalMouseDown = (e, modalElement) => {
+            // Don't allow dragging if the modal is maximized
+            if (currentModal.isMaximized) return;
+
+            const header = modalElement.querySelector('.modal-header');
+            // Check if the mousedown event is on the header and not on a button within the header
+            if (header && header.contains(e.target) && !e.target.closest('button')) {
+                isDragging = true;
+                draggedModal = modalElement;
+                const modalRect = modalElement.getBoundingClientRect();
+                // Calculate the offset from the mouse pointer to the top-left corner of the modal
+                dragOffset = { x: e.clientX - modalRect.left, y: e.clientY - modalRect.top };
+                modalElement.classList.add('cursor-grabbing'); // Change cursor for the modal
+                header.classList.add('cursor-grabbing'); // Change cursor for the header
+                header.classList.remove('cursor-grab');
+                e.preventDefault(); // Prevent text selection or other default actions
+            }
+        };
+
+        const handleGlobalMouseMove = (e) => {
+            // Only move if dragging is active, a modal is being dragged, and it's not maximized
+            if (!isDragging || !draggedModal || currentModal.isMaximized) return;
+
+            const modalWidth = draggedModal.offsetWidth;
+            const modalHeight = draggedModal.offsetHeight;
+
+            // Calculate the new top-left position
+            let newX = e.clientX - dragOffset.x;
+            let newY = e.clientY - dragOffset.y;
+
+            // Constrain the modal within the viewport boundaries
+            newX = Math.min(Math.max(0, newX), window.innerWidth - modalWidth);
+            newY = Math.min(Math.max(0, newY), window.innerHeight - modalHeight);
+
+            // Apply the new position using transform for performance
+            draggedModal.style.transform = `translate(${newX}px, ${newY}px)`;
+        };
+
+        const handleGlobalMouseUp = () => {
+            // Reset cursor styles when dragging stops
+            if (isDragging && draggedModal) {
+                 draggedModal.classList.remove('cursor-grabbing');
+                 const header = draggedModal.querySelector('.modal-header');
+                 if (header) {
+                     header.classList.remove('cursor-grabbing');
+                     // Restore grab cursor only if not maximized
+                     if (!currentModal.isMaximized) {
+                        header.classList.add('cursor-grab');
+                     }
+                 }
+            }
+            // Reset dragging state
+            isDragging = false;
+            draggedModal = null;
+        };
+
+        // Attach global listeners for mouse move and mouse up to handle dragging state
+        document.addEventListener('mousemove', handleGlobalMouseMove);
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+
+
+        // --- UI Rendering Functions ---
+
+        // Renders the initial boot screen with progress bar
+        const renderBootScreen = () => {
+            appRoot.innerHTML = `
+                <div class="fixed inset-0 flex flex-col items-center justify-center bg-black text-red-500 font-mono z-[100] p-4">
+                    <div class="z-10 text-center p-4 sm:p-8 bg-black bg-opacity-80 rounded-lg border border-red-800 shadow-lg shadow-red-900/50 w-full max-w-md">
+                        <h1 class="text-3xl sm:text-4xl font-bold mb-6 animate-pulse">808MAFIALIVE</h1>
+                        <div class="w-full max-w-[16rem] sm:w-64 h-4 bg-gray-800 border border-red-700 rounded-full overflow-hidden mb-2 mx-auto">
+                            <div id="boot-progress-bar" class="h-full bg-gradient-to-r from-pink-600 to-red-600 transition-all duration-100 ease-linear" style="width: 0%;"></div>
+                        </div>
+                        <p id="boot-progress-text" class="text-base sm:text-lg">Loading... 0%</p>
+                        <div class="text-xs text-gray-600 mt-4">(Press Esc later to view boot log)</div>
+                    </div>
+                </div>
+            `;
+
+            let progress = 0;
+            const targetProgress = 808; // Arbitrary target number for the loading effect
+            const duration = 5000; // Total duration of the boot animation in ms
+            const intervalTime = duration / targetProgress; // Time per progress increment
+            const progressBar = document.getElementById('boot-progress-bar');
+            const progressText = document.getElementById('boot-progress-text');
+
+            // Simulate boot progress
+            const interval = setInterval(() => {
+                progress++;
+                const normalizedProgress = Math.min(100, (progress / targetProgress) * 100); // Calculate percentage
+                if (progressBar) progressBar.style.width = `${normalizedProgress}%`;
+                if (progressText) progressText.textContent = `Loading... ${progress}%`;
+
+                // When target progress is reached
+                if (progress >= targetProgress) {
+                    clearInterval(interval);
+                    // Wait a bit before transitioning to the login screen
+                    setTimeout(() => {
+                        appState = 'login';
+                        render(); // Trigger re-render for the login screen
+                    }, 500);
+                }
+            }, intervalTime);
+        };
+
+        // Renders the login screen with email input and Agent ID generation
+        const renderLoginScreen = () => {
+            appRoot.innerHTML = `
+                <div class="fixed inset-0 flex items-center justify-center bg-black text-red-500 font-mono p-4 z-10">
+                    <form id="login-form" class="z-10 w-full max-w-md bg-black bg-opacity-80 p-8 rounded-lg border border-red-800 shadow-lg shadow-red-900/50">
+                        <h1 class="text-2xl font-bold text-center mb-6 text-red-400">808 Mafia OS Login</h1>
+                        <div class="mb-4">
+                            <label for="email" class="block text-sm font-medium mb-1 text-red-300">Operator Email:</label>
+                            <input type="email" id="email" placeholder="your-email@example.com" required
+                                   class="w-full px-3 py-2 bg-gray-900 border border-red-700 rounded-md text-red-300 placeholder-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition duration-200">
+                        </div>
+                        <div class="mb-6 flex items-end gap-4">
+                            <button type="button" id="generate-id-button"
+                                    class="px-4 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-white disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed">
+                               <span class="icon-placeholder">🛡️</span> Generate Agent ID
+                            </button>
+                            <div id="agent-id-display-container" class="flex-grow hidden">
+                                <label for="agentIdDisplay" class="block text-sm font-medium mb-1 text-red-300">Your Agent ID:</label>
+                                <input type="text" id="agentIdDisplay" readonly
+                                       class="w-full px-3 py-2 bg-gray-800 border border-purple-700 rounded-md text-pink-300 focus:outline-none cursor-default">
+                            </div>
+                        </div>
+                         <div id="login-error" class="text-sm text-yellow-400 mb-4 hidden"></div>
+                        <button type="submit" id="login-button" disabled
+                                class="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center justify-center gap-2 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed">
+                           <span class="icon-placeholder">🔑</span> Login
+                        </button>
+                        <div class="mt-6 text-center text-xs text-gray-500">Need access? Contact administration.</div>
+                    </form>
+                </div>
+            `;
+
+            // Get references to form elements
+            const loginForm = document.getElementById('login-form');
+            const emailInput = document.getElementById('email');
+            const generateButton = document.getElementById('generate-id-button');
+            const agentIdContainer = document.getElementById('agent-id-display-container');
+            const agentIdInput = document.getElementById('agentIdDisplay');
+            const loginButton = document.getElementById('login-button');
+            const errorDiv = document.getElementById('login-error');
+
+            let currentAgentId = ''; // Store the generated ID locally
+            let isGenerating = false; // Prevent multiple generation clicks
+
+            // Enable/disable login button based on email and agent ID presence
+            const updateLoginButtonState = () => {
+                loginButton.disabled = !currentAgentId || !emailInput.value.trim();
+            };
+
+            // Handle email input changes
+            emailInput.addEventListener('input', () => {
+                currentAgentId = ''; // Reset agent ID if email changes
+                agentIdContainer.classList.add('hidden'); // Hide display
+                agentIdInput.value = '';
+                errorDiv.classList.add('hidden'); // Hide errors
+                errorDiv.textContent = '';
+                generateButton.disabled = !emailInput.value.trim() || isGenerating; // Enable/disable generate button
+                updateLoginButtonState();
+            });
+
+            // Handle generate Agent ID button click
+            generateButton.addEventListener('click', () => {
+                const email = emailInput.value.trim();
+                // Validate email format
+                if (!email || !/\S+@\S+\.\S+/.test(email)) {
+                    errorDiv.textContent = 'Please enter a valid email address.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                errorDiv.classList.add('hidden'); // Hide error if valid
+                isGenerating = true;
+                generateButton.disabled = true; // Disable button during generation
+                generateButton.innerHTML = `<span class="icon-placeholder animate-spin">🔄</span> Generating...`; // Show loading state
+
+                // Simulate generation delay
+                setTimeout(() => {
+                    currentAgentId = generateAgentId(AGENT_ID_LENGTH);
+                    agentIdInput.value = currentAgentId; // Display the ID
+                    agentIdContainer.classList.remove('hidden');
+                    console.log(`User Logged: Email=${email}, AgentID=${currentAgentId}`); // Log credentials (simulation)
+                    isGenerating = false;
+                    generateButton.disabled = false; // Re-enable button
+                     generateButton.innerHTML = `<span class="icon-placeholder">🛡️</span> Generate Agent ID`; // Restore button text
+                    updateLoginButtonState(); // Update login button state
+                }, 500);
+            });
+
+            // Handle form submission (login)
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevent default form submission
+                if (currentAgentId && emailInput.value.trim()) {
+                    // Store credentials globally
+                    credentials.email = emailInput.value.trim();
+                    credentials.agentId = currentAgentId;
+                    appState = 'desktop'; // Change app state
+                    console.log("Login Successful.");
+                    render(); // Trigger re-render for the desktop
+                    // Note: Automatic opening of tickets modal was removed
+                } else {
+                    // Show error if fields are missing
+                    errorDiv.textContent = 'Please enter your email and generate an Agent ID first.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+             // Initial state setup for buttons
+             generateButton.disabled = !emailInput.value.trim();
+             updateLoginButtonState();
+        };
+
+        // Renders the main desktop UI including icons and taskbar
+        const renderDesktop = () => {
+            appRoot.innerHTML = `
+                <div id="desktop-container" class="relative flex flex-col h-screen bg-black text-red-600 font-mono overflow-hidden">
+                    <main id="desktop-main" class="flex-1 relative z-10 overflow-hidden p-4 pt-6">
+                        </main>
+                    <footer class="relative h-12 bg-black bg-opacity-90 border-t border-purple-800/50 flex items-center justify-between px-4 z-20 flex-shrink-0">
+                        <div class="w-1/3 flex justify-start">
+                            <button id="new-note-button" class="flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-green-800 hover:bg-green-700 text-green-300 transition duration-150 focus:outline-none focus:ring-1 focus:ring-green-500" title="Create New Note">
+                                <span class="icon-placeholder">➕</span> New Note
+                            </button>
+                        </div>
+                        <div id="start-menu-container" class="relative flex justify-center w-1/3">
+                            <button id="start-button" class="flex items-center gap-2 px-4 py-1.5 rounded-md transition duration-150 font-bold text-sm hover:bg-pink-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-black bg-purple-900 text-pink-300">
+                                <span class="icon-placeholder">⚡</span> 808 Mafia OS
+                            </button>
+                            <div id="start-menu" class="hidden absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-64 bg-black bg-opacity-95 border border-pink-700 rounded-lg shadow-xl shadow-pink-900/50 z-50 text-red-300 font-mono overflow-hidden flex flex-col max-h-[70vh]">
+                                <div class="flex-grow overflow-y-auto p-1">
+                                    </div>
+                                <div class="p-2 border-t border-purple-800/50 mt-auto flex-shrink-0 bg-black">
+                                    <ul class="space-y-1">
+                                        <li><button id="restart-button" class="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-yellow-600 hover:text-black transition duration-150 text-sm text-yellow-300"><span class="icon-placeholder">🔄</span> Restart Session</button></li>
+                                        <li><button id="shutdown-button" class="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-red-600 hover:text-white transition duration-150 text-sm text-red-400"><span class="icon-placeholder">🔌</span> Shutdown</button></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end w-1/3">
+                            <div id="clock-display" class="flex items-center gap-2 text-xs text-pink-300 px-2">
+                                <span class="icon-placeholder">⏰</span>
+                                <span id="clock-date"></span>
+                                <span id="clock-time"></span>
+                            </div>
+                            <div class="ml-2 text-xs text-gray-400 hidden lg:block truncate px-2 border-l border-gray-700" title="Agent ID: ${credentials.agentId} | Email: ${credentials.email}">Agent: ${credentials.agentId}</div>
+                        </div>
+                    </footer>
+                     <div id="modal-area"></div>
+                     <div id="hidden-log-area"></div>
+                </div>
+            `;
+
+            // Render dynamic parts of the desktop
+            renderDesktopIcons();
+            renderStartMenuItems();
+            updateClock(); // Initial clock update
+            setInterval(updateClock, 1000); // Update clock every second
+
+            // Get references to taskbar elements
+            const startButton = document.getElementById('start-button');
+            const startMenu = document.getElementById('start-menu');
+            const newNoteButton = document.getElementById('new-note-button');
+            const restartButton = document.getElementById('restart-button');
+            const shutdownButton = document.getElementById('shutdown-button');
+
+            // Toggle Start Menu visibility
+            startButton.addEventListener('click', (e) => {
+                 e.stopPropagation(); // Prevent click from closing the menu immediately
+                 isStartMenuOpen = !isStartMenuOpen;
+                 startMenu.classList.toggle('hidden', !isStartMenuOpen);
+                 // Update button appearance based on state
+                 startButton.classList.toggle('bg-pink-800', isStartMenuOpen);
+                 startButton.classList.toggle('text-white', isStartMenuOpen);
+                 startButton.classList.toggle('bg-purple-900', !isStartMenuOpen);
+                 startButton.classList.toggle('text-pink-300', !isStartMenuOpen);
+            });
+
+             // Close Start Menu if clicking outside of it
+             document.addEventListener('click', (e) => {
+                 const startMenuContainer = document.getElementById('start-menu-container');
+                  // Check if the menu is open and the click was outside the container
+                  if (isStartMenuOpen && !startMenuContainer.contains(e.target)) {
+                      closeStartMenu();
+                  }
+             });
+
+             // Add event listeners for taskbar buttons
+             newNoteButton.addEventListener('click', () => { openNoteModal(); closeStartMenu(); });
+             restartButton.addEventListener('click', () => { handleRestart(); closeStartMenu(); });
+             shutdownButton.addEventListener('click', () => { handleInitiateShutdown(); closeStartMenu(); });
+        };
+
+        // Closes the start menu and resets the button style
+        const closeStartMenu = () => {
+            const startMenu = document.getElementById('start-menu');
+            const startButton = document.getElementById('start-button');
+            if (isStartMenuOpen && startMenu && startButton) {
+                isStartMenuOpen = false;
+                startMenu.classList.add('hidden');
+                // Reset start button styles
+                startButton.classList.remove('bg-pink-800', 'text-white');
+                startButton.classList.add('bg-purple-900', 'text-pink-300');
+            }
+        };
+
+        // Renders the icons onto the desktop area
+        const renderDesktopIcons = () => {
+            const desktopMain = document.getElementById('desktop-main');
+            if (!desktopMain) return; // Ensure the main area exists
+            desktopMain.innerHTML = ''; // Clear existing icons
+
+            desktopItemsData.forEach(item => {
+                if (!item.isVisible) return; // Skip hidden items
+
+                const iconDiv = document.createElement('div');
+                iconDiv.id = `icon-${item.id}`; // Assign an ID for potential styling/targeting
+
+                // Base classes for all icons
+                let iconClasses = `group absolute flex flex-col items-center justify-start space-y-1 p-1 rounded-lg hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-colors duration-150 text-center cursor-pointer ${ICON_SIZE_CLASS}`;
+                // Base classes for icon labels (initially hidden, shown on hover)
+                let labelClasses = `text-xs text-gray-200 break-words line-clamp-2 leading-tight pointer-events-none select-none opacity-0 group-hover:opacity-100 transition-opacity duration-150`;
+
+                // Special styling for the 'GET TICKETS!' icon
+                if (item.id === 'link_eventbrite') {
+                    iconClasses += ' animate-pulse'; // Add pulsing animation
+                    // Make label always visible and styled differently
+                    labelClasses = `text-xs text-orange-300 font-bold break-words line-clamp-2 leading-tight pointer-events-none select-none`;
+                }
+
+                iconDiv.className = iconClasses;
+                iconDiv.title = item.label === 'GET TICKETS!' ? 'Click here for event tickets!' : item.label; // Set tooltip
+
+                // Determine icon color based on item type
+                let iconColorClass = 'text-red-400'; // Default
+                if (item.type === 'link') {
+                    iconColorClass = item.id === 'link_eventbrite' ? 'text-orange-400' : 'text-blue-400';
+                } else if (item.type === 'app') {
+                    iconColorClass = item.id === 'youtube_player' ? 'text-red-400' : 'text-pink-400';
+                } else if (item.type === 'folder') {
+                    iconColorClass = 'text-yellow-500';
+                } else if (item.type === 'system') {
+                    iconColorClass = 'text-gray-400';
+                }
+
+                // Set the inner HTML for the icon (emoji + label)
+                iconDiv.innerHTML = `
+                    <span class="text-3xl ${iconColorClass} mb-0.5 flex-shrink-0 pointer-events-none">${item.icon || '?'}</span>
+                    <span class="${labelClasses}">${item.label}</span>
+                `;
+
+                // Get and apply specific positioning styles for this icon
+                const style = getIconStyle(item, desktopMain);
+                Object.assign(iconDiv.style, style);
+
+                // Add click listener to handle icon actions
+                iconDiv.addEventListener('click', () => handleDesktopItemClick(item));
+
+                // Append the icon to the desktop
+                desktopMain.appendChild(iconDiv);
+            });
+        };
+
+        // Determines the absolute positioning style for each desktop icon
+        const getIconStyle = (item, desktopElement) => {
+            const desktopHeight = desktopElement?.clientHeight || window.innerHeight;
+            const desktopWidth = desktopElement?.clientWidth || window.innerWidth;
+            const taskbarHeight = 48; // Height of the taskbar
+            const iconWidth = 80; // Approximate width from ICON_SIZE_CLASS (w-20)
+            const iconHeight = 80; // Approximate height from ICON_SIZE_CLASS (h-20)
+            const linkIconSpacing = 90; // Horizontal space between link icons at the bottom
+
+            // Define positions based on item ID (hardcoded layout)
+            switch (item.id) {
+                // Corners and specific positions
+                case 'network': return { top: `${PADDING}px`, right: `${PADDING}px` }; // Top-right
+                case 'trash': return { bottom: `${PADDING + taskbarHeight}px`, right: `${PADDING}px` }; // Bottom-right (above taskbar)
+                case 'soundcloud_player': return { left: `calc(50% - ${iconWidth / 2}px - 50px)`, top: `calc(50% - ${iconHeight / 2}px)` }; // Center-left
+                case 'youtube_player': return { left: `calc(50% - ${iconWidth / 2}px + 50px)`, top: `calc(50% - ${iconHeight / 2}px)` }; // Center-right
+                case 'documents_folder': return { left: `${PADDING}px`, top: `${PADDING}px` }; // Top-left
+                case 'link_eventbrite': return { top: `${PADDING}px`, left: `calc(50% - ${iconWidth / 2}px)` }; // Top-center
+
+                // Arrange other links horizontally at the bottom-center
+                case 'link_808mafia_io':
+                    // Filter visible links excluding the special 'eventbrite' one
+                    const links = desktopItemsData.filter(i => i.type === 'link' && i.isVisible && i.id !== 'link_eventbrite');
+                    const linkIndex = links.findIndex(l => l.id === item.id);
+                    if (linkIndex === -1) return { display: 'none' }; // Should not happen if visible, but safety check
+                    const totalLinkWidth = links.length * linkIconSpacing; // Total width occupied by these links
+                    const startLinkX = (desktopWidth - totalLinkWidth) / 2; // Starting X position for the first link
+                    return { left: `${startLinkX + linkIndex * linkIconSpacing}px`, bottom: `${taskbarHeight + PADDING}px` }; // Position based on index
+
+                // Default position (fallback)
+                default: return { top: `${PADDING * 5}px`, left: `${PADDING}px` };
+            }
+        };
+
+        /**
+         * Handles clicks on desktop icons, triggering appropriate actions.
+         * @param {object} item - The data object for the clicked desktop item.
+         */
+         const handleDesktopItemClick = (item) => {
+             if (item.type === 'folder') {
+                 // Open a modal displaying folder contents
+                 openModal(item.label, item.content, 'folder', item.id);
+             } else if (item.type === 'app') {
+                 // Open a modal representing the application
+                 openModal(item.label, '', 'app', item.id);
+             } else if (item.type === 'system') {
+                  // Handle system icons (Network, Trash)
+                  if (item.id === 'trash') {
+                      // Trash is locked/permission denied
+                      alert(PERMISSION_DENIED_MESSAGE);
+                  } else if (item.id === 'network') {
+                       // Open Network settings modal (also restricted)
+                       openModal(item.label, 'Network Settings', 'system', item.id);
+                  } else {
+                      // Default permission denied for other potential system items
+                      alert(PERMISSION_DENIED_MESSAGE);
+                  }
+             } else if (item.type === 'link') {
+                 // Open external links in a new browser tab
+                 window.open(item.url, '_blank', 'noopener,noreferrer');
+             }
+             closeStartMenu(); // Close start menu after any action
+         };
+
+        // Populates the start menu with items based on desktop data
+        const renderStartMenuItems = () => {
+            const menuContentDiv = document.querySelector('#start-menu > div:first-child'); // Target the scrollable content area
+            if (!menuContentDiv) return;
+            menuContentDiv.innerHTML = ''; // Clear previous items
+
+            // Filter desktop items by type for sectioning
+            const apps = desktopItemsData.filter(item => item.type === 'app' && item.isVisible);
+            const folders = desktopItemsData.filter(item => item.type === 'folder' && item.isVisible);
+            const webLinks = desktopItemsData.filter(item => item.type === 'link' && item.isVisible);
+            const systemItems = desktopItemsData.filter(item => item.type === 'system' && item.isVisible);
+
+            // Helper function to create a section in the start menu
+            const createSection = (title, icon, items, itemColorClass, titleColorClass) => {
+                 if (items.length === 0) return ''; // Don't render empty sections
+                 // Add top border if it's not the first section
+                 const borderClass = menuContentDiv.children.length > 0 ? 'border-t border-purple-800/50' : '';
+                 return `
+                     <div class="px-2 pt-2 pb-1 ${borderClass}">
+                         <h3 class="font-bold ${titleColorClass} flex items-center gap-2"><span class="icon-placeholder">${icon}</span> ${title}</h3>
+                     </div>
+                     <ul class="px-1 space-y-1">
+                         ${items.map(item => `
+                             <li>
+                                 <button data-item-id="${item.id}" class="start-menu-item w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-pink-700 hover:text-white transition duration-150 text-sm">
+                                     <span class="icon-placeholder ${itemColorClass}">${item.icon}</span>
+                                     <span>${item.label}</span>
+                                 </button>
+                             </li>
+                         `).join('')}
+                     </ul>
+                 `;
+            };
+
+             // Render sections for each item type
+             menuContentDiv.innerHTML += createSection('Applications', '▶️', apps, 'text-pink-400', 'text-pink-400');
+             menuContentDiv.innerHTML += createSection('Folders', '📁', folders, 'text-yellow-500', 'text-yellow-500');
+             menuContentDiv.innerHTML += createSection('Websites & Links', '🌐', webLinks, 'text-blue-400', 'text-blue-400');
+             menuContentDiv.innerHTML += createSection('System', '⚙️', systemItems, 'text-gray-400', 'text-gray-400');
+
+              // Add click listeners to all newly created menu items
+              menuContentDiv.querySelectorAll('.start-menu-item').forEach(button => {
+                  button.addEventListener('click', () => {
+                      const itemId = button.getAttribute('data-item-id');
+                      // Find the corresponding item data (could be desktop or document)
+                      const item = desktopItemsData.find(d => d.id === itemId) || eventDocuments.find(d => d.id === itemId);
+                      if (item) {
+                          handleDesktopItemClick(item); // Trigger the same action as clicking the desktop icon
+                      }
+                  });
+
+                  // Special case: Change icon color for Eventbrite link in the menu
+                  if (button.getAttribute('data-item-id') === 'link_eventbrite') {
+                      const iconSpan = button.querySelector('.icon-placeholder');
+                      if (iconSpan) iconSpan.classList.replace('text-blue-400', 'text-orange-400');
+                  }
+              });
+        };
+
+        // Updates the clock display in the taskbar
+        const updateClock = () => {
+            const clockDateEl = document.getElementById('clock-date');
+            const clockTimeEl = document.getElementById('clock-time');
+            if (!clockDateEl || !clockTimeEl) return; // Ensure elements exist
+
+            const now = new Date();
+            // Formatting options for date and time
+            const optionsDate = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const optionsTime = { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true };
+
+            // Update text content
+            clockDateEl.textContent = now.toLocaleDateString(undefined, optionsDate); // Use locale default format
+            clockTimeEl.textContent = now.toLocaleTimeString(undefined, optionsTime);
+        };
+
+        // --- Modal Logic ---
+
+        /**
+         * Opens a standard modal window.
+         * @param {string} title - The title for the modal header.
+         * @param {string} content - The content (text, markdown, or special identifier).
+         * @param {string} [type='file'] - The type ('file', 'folder', 'app', 'system').
+         * @param {string|null} [id=null] - The unique ID of the item opening the modal.
+         */
+        const openModal = (title, content, type = 'file', id = null) => {
+            // Update the global currentModal state
+            currentModal = {
+                isOpen: true, title, content, type, id,
+                isMaximized: false, // Modals always open non-maximized
+                originalTransform: '', originalWidth: '', originalHeight: '', originalTop: '', originalLeft: '' // Reset positioning info
+             };
+            renderModal(); // Render the modal based on the new state
+            closeStartMenu(); // Ensure start menu is closed when a modal opens
+        };
+
+        // Closes the currently open standard modal
+        const closeModal = () => {
+            // Reset the global currentModal state to closed/empty
+            currentModal = { isOpen: false, title: '', content: '', type: 'file', id: null, isMaximized: false, originalTransform: '', originalWidth: '', originalHeight: '', originalTop: '', originalLeft: '' };
+            renderModal(); // Re-render to remove the modal from the DOM
+        };
+
+        // Toggles the maximized state of the currently open standard modal
+        const toggleMaximizeModal = (modalElement) => {
+            if (!modalElement) return; // Ensure the modal element exists
+
+            const maximizeButton = modalElement.querySelector('.modal-maximize-button');
+
+            if (currentModal.isMaximized) {
+                // --- Restore ---
+                // Apply the stored original position and size
+                modalElement.style.transform = currentModal.originalTransform;
+                modalElement.style.width = currentModal.originalWidth;
+                modalElement.style.height = currentModal.originalHeight;
+                modalElement.style.top = currentModal.originalTop;
+                modalElement.style.left = currentModal.originalLeft;
+                modalElement.classList.remove('maximized'); // Remove the maximized class
+                if(maximizeButton) maximizeButton.textContent = '□'; // Change button icon to maximize
+                currentModal.isMaximized = false;
+                // Re-enable dragging
+                modalElement.addEventListener('mousedown', (e) => handleModalMouseDown(e, modalElement));
+                modalElement.classList.add('cursor-grab');
+                const header = modalElement.querySelector('.modal-header');
+                if (header) header.classList.add('cursor-grab');
+            } else {
+                // --- Maximize ---
+                // Store the current position and size before maximizing
+                const rect = modalElement.getBoundingClientRect();
+                currentModal.originalTransform = modalElement.style.transform;
+                currentModal.originalWidth = modalElement.style.width || `${rect.width}px`;
+                currentModal.originalHeight = modalElement.style.height || `${rect.height}px`;
+                currentModal.originalTop = modalElement.style.top;
+                currentModal.originalLeft = modalElement.style.left;
+
+                modalElement.classList.add('maximized'); // Add maximized class (handles positioning/sizing via CSS)
+                if(maximizeButton) maximizeButton.textContent = '❐'; // Change button icon to restore
+                currentModal.isMaximized = true;
+                // Disable dragging
+                modalElement.removeEventListener('mousedown', handleModalMouseDown);
+                modalElement.classList.remove('cursor-grab', 'cursor-grabbing');
+                const header = modalElement.querySelector('.modal-header');
+                if (header) header.classList.remove('cursor-grab', 'cursor-grabbing');
+            }
+        };
+
+         // Opens the dedicated "New Note" modal
+         const openNoteModal = () => {
+             isNoteModalOpen = true; // Set state flag
+             renderNoteModal(); // Render the note modal
+             closeStartMenu(); // Ensure start menu is closed
+         };
+
+         // Closes the "New Note" modal
+         const closeNoteModal = () => {
+             isNoteModalOpen = false; // Reset state flag
+             renderNoteModal(); // Re-render to remove the modal
+         };
+
+        // Opens a file modal when a file is clicked within a folder modal
+        const openFileFromFolder = (file) => {
+            // Close the current folder modal first if it's open
+            if (currentModal.type === 'folder') {
+                closeModal();
+            }
+            // Open a new modal for the selected file
+            openModal(file.label, file.content, 'file', file.id);
+        };
+
+         // Handles the "Send Note" action (simulation)
+         const handleSendNote = (title, content) => {
+             // Basic validation
+             if (!title.trim() || !content.trim()) {
+                 alert("Please enter both a title and content for the note.");
+                 return false; // Indicate failure
+             }
+             // Simulate sending the note (log to console)
+             console.log(`--- New Note ---\nTo: ${NOTE_EMAIL_TARGET}\nSubject: 808 OS Note - ${title}\n---\n${content}\n--- End Note (Simulation) ---`);
+             // Show confirmation alert
+             alert(`Note "${title}" sent to ${NOTE_EMAIL_TARGET} (simulation).`);
+             return true; // Indicate success
+         };
+
+          // Handles clicking the "Download" link in file modals (shows permission denied)
+          const handleDownloadClick = (e, title) => {
+               e.preventDefault(); // Prevent default link behavior
+               console.log(`Download attempt blocked for: ${title}`);
+               alert(PERMISSION_DENIED_MESSAGE); // Show permission denied message
+          };
+
+        /**
+         * Generates the HTML content for the body of a standard modal based on its type.
+         * Populates the scrollable content area.
+         */
+        const renderModalContent = (modalData) => {
+            const { type, id, content, title } = modalData;
+
+            // --- Folder Modal ---
+            if (type === 'folder') {
+                // List documents within the folder
+                return `
+                    <div class="p-3 space-y-1">
+                        ${eventDocuments.map(doc => `
+                            <button data-doc-id="${doc.id}" class="folder-file-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-md text-red-300 hover:bg-red-700 hover:text-white transition duration-150 text-sm">
+                                <span class="icon-placeholder text-red-400 flex-shrink-0">${ doc.id === 'event_overview' ? '🔒' : doc.icon}</span> <span>${doc.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+             // --- Note Modal (Content handled separately in renderNoteModal) ---
+            if (type === 'note') return ''; // Content area is handled by renderNoteModal structure
+
+            // --- App Modals ---
+            if (type === 'app' && id === 'soundcloud_player') {
+                 // Embed SoundCloud player
+                 const soundcloudEmbedCode = `<iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/2013820284&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe><div class="soundcloud-attribution"><a href="https://soundcloud.com/skywarp-media" title="Skywarp Media" target="_blank">Skywarp Media</a> · <a href="https://soundcloud.com/skywarp-media/sets/808os" title="808os" target="_blank">808os</a></div>`;
+                 return `
+                     <div class="w-full h-full bg-black flex flex-col">
+                          ${soundcloudEmbedCode}
+                     </div>`;
+            }
+
+            if (type === 'app' && id === 'youtube_player') {
+                  // Show permission denied message for Video Player
+                  return `
+                      <div class="text-center p-5">
+                           <span class="text-5xl mx-auto mb-4 text-red-500 inline-block">🎬</span>
+                           <p class="text-lg font-semibold mb-2 text-red-400">${title}</p>
+                           <p class="text-sm text-yellow-500 mt-4 p-3 bg-gray-800 border border-yellow-700 rounded">${PERMISSION_DENIED_MESSAGE}</p>
+                      </div>`;
+             }
+
+            // --- System Modals (Network, Trash) ---
+            if (type === 'system') {
+                const icon = title === 'Trash' ? '🗑️' : '📶';
+                if (id === 'network') {
+                     // Network settings modal content (restricted)
+                     return `
+                         <div class="text-center p-5">
+                             <span class="text-5xl mx-auto mb-4 text-gray-500 inline-block">${icon}</span>
+                             <p class="text-lg font-semibold mb-2 text-red-400">${title}</p>
+                             <p class="text-sm text-gray-400 mb-4">Network interface access is restricted.</p>
+                             <button onclick="alert(PERMISSION_DENIED_MESSAGE)" class="mt-4 px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs rounded-md disabled:bg-gray-700 disabled:cursor-not-allowed" disabled>
+                                 Launch Interface (Locked)
+                             </button>
+                         </div>`;
+                } else { // Assume Trash or other restricted system item
+                     // Generic permission denied for other system modals
+                     return `
+                         <div class="text-center p-5">
+                             <span class="text-5xl mx-auto mb-4 text-gray-500 inline-block">${icon}</span>
+                             <p class="text-lg font-semibold mb-2 text-red-400">${title}</p>
+                              <p class="text-sm text-yellow-500 mt-4 p-3 bg-gray-800 border border-yellow-700 rounded">${PERMISSION_DENIED_MESSAGE}</p>
+                         </div>`;
+                }
+            }
+
+            // --- File Modal (Default) ---
+            // Parse and display markdown-like content for text files
+            return `<div class="p-4 prose prose-sm prose-invert max-w-none">${parseContent(content)}</div>`;
+        };
+
+
+        /**
+         * Renders the main structure of a standard modal window (for files, folders, apps, system items).
+         * Handles positioning, header, content area, footer, and controls.
+         */
+        const renderModal = () => {
+            const modalArea = document.getElementById('modal-area');
+            if (!modalArea) return; // Ensure the container exists
+
+            // Remove any existing standard modal before rendering a new one or closing
+            const existingModalContainer = modalArea.querySelector('#standard-modal-container');
+            if (existingModalContainer) {
+                existingModalContainer.remove();
+            }
+
+            // If the modal state is closed, just return after removing the old one
+            if (!currentModal.isOpen) return;
+
+            const { title, content, type, id, isMaximized } = currentModal;
+
+             // Determine header icon and color based on modal type/id
+             let headerIcon = '📄'; // Default file icon
+             let headerIconColor = 'text-red-400';
+             if (type === 'app') {
+                 headerIcon = id === 'youtube_player' ? '🎬' : '▶️';
+                 headerIconColor = id === 'youtube_player' ? 'text-red-400' : 'text-pink-400';
+             } else if (type === 'system') {
+                 headerIcon = title === 'Trash' ? '🗑️' : '📶';
+                 headerIconColor = 'text-gray-400';
+             } else if (type === 'folder') {
+                 headerIcon = '📁';
+                 headerIconColor = 'text-yellow-500';
+             } else if (type === 'file' && id === 'event_overview') { // Lock icon for overview file header
+                 headerIcon = '🔒';
+             }
+
+
+            // Create the overlay container
+            const modalContainer = document.createElement('div');
+            modalContainer.id = 'standard-modal-container';
+            // Overlay styles: fixed position, covers screen, semi-transparent background
+            modalContainer.className = 'fixed inset-0 z-40 modal-overlay bg-black bg-opacity-60 pointer-events-none'; // pointer-events-none allows clicks through overlay
+
+            // Create the modal window element itself
+            const modalElement = document.createElement('div');
+            modalElement.id = 'standard-modal';
+
+             // Calculate initial position (centered) and size constraints
+             const modalWidth = Math.min(window.innerWidth * 0.9, 800); // Max width 800px or 90% of viewport
+             // Estimate height based on type (SoundCloud needs less height)
+             const modalHeightEstimate = (type === 'app' && id === 'soundcloud_player')
+                                        ? Math.min(window.innerHeight * 0.8, 400) // Smaller height for SoundCloud
+                                        : window.innerHeight * 0.7; // Default height estimate
+             const initialX = Math.max(0, (window.innerWidth - modalWidth) / 2); // Center horizontally
+             const initialY = Math.max(PADDING, (window.innerHeight - modalHeightEstimate) / 2); // Center vertically, with top padding minimum
+
+             // Set max height class based on type
+             const maxHClass = (type === 'app' && id === 'soundcloud_player')
+                              ? 'max-h-[90vh]' // Allow SoundCloud more vertical space if needed
+                              : 'max-h-[80vh]'; // Default max height
+
+            const maximizedClass = isMaximized ? 'maximized' : ''; // Add 'maximized' class if applicable
+
+            // Base classes for the modal window
+            modalElement.className = `modal-container absolute z-50 bg-black rounded-lg w-full max-w-2xl ${maxHClass} flex flex-col pointer-events-auto animate-themed-pulse-border overflow-hidden ${isMaximized ? 'cursor-default' : 'cursor-grab'} ${maximizedClass}`; // pointer-events-auto enables interaction with the modal itself
+
+            // Apply initial position/size if not maximized, otherwise rely on 'maximized' class styles
+            if (isMaximized) {
+                // Styles are applied by the 'maximized' CSS class
+            } else {
+                 // Use stored values if restoring, otherwise use calculated initial values
+                 modalElement.style.transform = currentModal.originalTransform || `translate(${initialX}px, ${initialY}px)`;
+                 modalElement.style.width = currentModal.originalWidth || ''; // Use default width from class or stored width
+                 modalElement.style.height = currentModal.originalHeight || ''; // Use default height from class or stored height
+                 modalElement.style.top = currentModal.originalTop || '0px'; // Needed for transform origin
+                 modalElement.style.left = currentModal.originalLeft || '0px'; // Needed for transform origin
+            }
+
+            // Set the inner HTML structure of the modal
+            modalElement.innerHTML = `
+                <div class="modal-header flex items-center justify-between p-3 border-b border-pink-700 bg-gradient-to-r from-purple-900 via-pink-900 to-red-900 ${isMaximized ? 'cursor-default' : 'cursor-grab'} select-none flex-shrink-0">
+                    <h2 class="text-base sm:text-lg font-bold text-gray-200 flex items-center gap-2 truncate pr-2">
+                        <span class="icon-placeholder ${headerIconColor}">${headerIcon}</span>
+                        <span class="truncate">${title}</span>
+                    </h2>
+                    <div class="flex items-center flex-shrink-0">
+                         <button class="modal-minimize-button window-control-button minimize" aria-label="Minimize modal" title="Minimize">_</button>
+                         <button class="modal-maximize-button window-control-button maximize" aria-label="Maximize/Restore modal" title="Maximize/Restore">${isMaximized ? '❐' : '□'}</button>
+                         <button class="modal-close-button window-control-button close" aria-label="Close modal" title="Close">✕</button>
+                    </div>
+                </div>
+                <div class="modal-content-area overflow-y-auto text-red-300 text-sm leading-relaxed select-none bg-black bg-opacity-80 flex-grow">
+                    ${renderModalContent(currentModal)} </div>
+                ${type === 'file' ? `
+                <div class="modal-footer p-2 border-t border-purple-800/50 text-center bg-black bg-opacity-90 flex-shrink-0">
+                    <a href="#" class="modal-download-link inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 hover:underline">
+                        <span class="icon-placeholder">⬇️</span> Download (Access Denied)
+                    </a>
+                </div>` : ''}
+            `;
+
+            // Append the modal element to the overlay container, and the container to the modal area
+            modalContainer.appendChild(modalElement);
+            modalArea.appendChild(modalContainer);
+
+             // Add event listeners to the modal controls
+             modalElement.querySelector('.modal-close-button').addEventListener('click', closeModal);
+             modalElement.querySelector('.modal-minimize-button').addEventListener('click', closeModal); // Minimize action currently just closes the modal
+             modalElement.querySelector('.modal-maximize-button').addEventListener('click', () => toggleMaximizeModal(modalElement));
+
+             // Add listener for the download link if it exists (only for 'file' type)
+             const downloadLink = modalElement.querySelector('.modal-download-link');
+             if (downloadLink) {
+                 downloadLink.addEventListener('click', (e) => handleDownloadClick(e, title));
+             }
+
+             // --- MODIFIED: Add password check for folder items ---
+             if (type === 'folder') {
+                 console.log("Attaching listeners to folder items..."); // Add log
+                 modalElement.querySelectorAll('.folder-file-item').forEach(button => { // Selects buttons inside the specific modalElement
+                     button.addEventListener('click', () => { // Adds listener to each button
+                         console.log("Folder item clicked!"); // Add log
+                         const docId = button.getAttribute('data-doc-id'); // Gets the ID
+                         const doc = eventDocuments.find(d => d.id === docId); // Finds the doc object
+                         console.log("Clicked docId:", docId, "Found doc:", doc); // Add log
+
+                         if (doc) { // Checks if doc was found
+                             // Check if this is the protected document
+                             if (doc.id === 'event_overview') { // Checks the ID
+                                 console.log("Attempting to open protected doc:", doc.label); // Add log
+                                 const enteredPassword = prompt("Enter password to view Event Overview:"); // Prompts for password
+                                 console.log("Password entered:", enteredPassword); // Add log
+                                 // Check if password is correct (allow cancel/empty as incorrect)
+                                 if (enteredPassword === EVENT_OVERVIEW_PASSWORD) {
+                                     console.log("Password correct. Opening file."); // Add log
+                                     openFileFromFolder(doc); // Open if password is correct
+                                 } else if (enteredPassword !== null) { // Only alert if they entered something wrong, not if they cancelled
+                                     console.log("Incorrect password entered."); // Add log
+                                     alert("Incorrect password. Access denied.");
+                                 } else {
+                                     console.log("Password prompt cancelled."); // Add log
+                                 }
+                             } else {
+                                 // Open other documents directly
+                                 console.log("Opening non-protected doc:", doc.label); // Add log
+                                 openFileFromFolder(doc);
+                             }
+                         } else {
+                             console.error("Document not found for ID:", docId); // Add error log
+                         }
+                     });
+                 });
+             }
+             // --- END MODIFICATION ---
+
+             // Add the mousedown listener for dragging, but only if the modal is not maximized
+             if (!isMaximized) {
+                modalElement.addEventListener('mousedown', (e) => handleModalMouseDown(e, modalElement));
+             }
+        };
+
+        // Renders the dedicated "New Note" modal
+        const renderNoteModal = () => {
+            const modalArea = document.getElementById('modal-area');
+            if (!modalArea) return;
+
+            // Remove existing note modal if present
+            const existingModal = modalArea.querySelector('#note-modal-container');
+            if (existingModal) existingModal.remove();
+
+            // If the note modal state is closed, just return
+            if (!isNoteModalOpen) return;
+
+            // Create overlay container
+            const modalContainer = document.createElement('div');
+            modalContainer.id = 'note-modal-container';
+            modalContainer.className = 'fixed inset-0 z-40 modal-overlay bg-black bg-opacity-60 pointer-events-none';
+
+            // Create modal element
+            const modalElement = document.createElement('div');
+             // Calculate initial position (centered)
+             const modalWidth = Math.min(window.innerWidth * 0.8, 672); // Slightly smaller max width than standard
+             const modalHeightEstimate = window.innerHeight * 0.7;
+             const initialX = Math.max(0, (window.innerWidth - modalWidth) / 2);
+             const initialY = Math.max(PADDING, (window.innerHeight - modalHeightEstimate) / 2);
+
+            // Base classes for the note modal (similar to standard, but specific ID and no maximize logic initially)
+            modalElement.className = `modal-container absolute z-50 bg-black rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col pointer-events-auto animate-themed-pulse-border overflow-hidden cursor-grab`;
+            // Apply initial position using transform
+            modalElement.style.transform = `translate(${initialX}px, ${initialY}px)`;
+            modalElement.style.left = '0px'; // Needed for transform
+            modalElement.style.top = '0px'; // Needed for transform
+
+            // Set inner HTML for the note modal structure
+            modalElement.innerHTML = `
+                <div class="modal-header flex items-center justify-between p-3 border-b border-pink-700 bg-gradient-to-r from-purple-900 via-pink-900 to-red-900 cursor-grab select-none">
+                    <h2 class="text-lg font-bold text-gray-200 flex items-center gap-2 truncate pr-2"><span class="icon-placeholder text-yellow-400">📝</span><span class="truncate">New Note</span></h2>
+                     <div class="flex items-center flex-shrink-0">
+                         <button class="note-modal-minimize-button window-control-button minimize" aria-label="Minimize modal" title="Minimize">_</button>
+                         <button class="note-modal-maximize-button window-control-button maximize" aria-label="Maximize/Restore modal" title="Maximize/Restore">□</button> <button class="note-modal-close-button window-control-button close" aria-label="Close modal" title="Close">✕</button>
+                    </div>
+                </div>
+                <div class="modal-content-area p-4 flex flex-col h-full overflow-y-auto bg-black bg-opacity-80 flex-grow">
+                     <input type="text" id="note-title-input" placeholder="Note Title" value="New Note" class="w-full px-3 py-2 mb-3 bg-gray-900 border border-purple-700 rounded-md text-pink-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 flex-shrink-0">
+                    <textarea id="note-content-input" placeholder="Enter your note here..." class="w-full h-48 px-3 py-2 bg-gray-900 border border-purple-700 rounded-md text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none flex-grow"></textarea>
+                </div>
+                <div class="modal-footer p-2 border-t border-purple-800/50 text-right bg-black bg-opacity-90 flex-shrink-0">
+                    <button id="note-send-button" class="inline-flex items-center gap-1 px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs rounded-md"><span class="icon-placeholder">✉️</span> Save & Send Note</button>
+                </div>
+            `;
+
+            // Append modal to container, container to area
+            modalContainer.appendChild(modalElement);
+            modalArea.appendChild(modalContainer);
+
+             // Add event listeners for note modal controls
+             modalElement.querySelector('.note-modal-close-button').addEventListener('click', closeNoteModal);
+             modalElement.querySelector('.note-modal-minimize-button').addEventListener('click', closeNoteModal); // Minimize also closes
+             // Simplified maximize for note modal - just toggles the class, doesn't store/restore perfectly like standard modal
+             modalElement.querySelector('.note-modal-maximize-button').addEventListener('click', () => {
+                modalElement.classList.toggle('maximized'); // Add/remove maximized class
+                const btn = modalElement.querySelector('.note-modal-maximize-button');
+                if(btn) btn.textContent = modalElement.classList.contains('maximized') ? '❐' : '□'; // Update button icon
+             });
+
+             // Add listener for the send button
+             modalElement.querySelector('#note-send-button').addEventListener('click', () => {
+                 const titleInput = document.getElementById('note-title-input');
+                 const contentInput = document.getElementById('note-content-input');
+                 // Call the send handler, and close the modal only if sending was successful (or simulated successfully)
+                 if (handleSendNote(titleInput.value, contentInput.value)) {
+                     closeNoteModal();
+                 }
+             });
+
+             // Add mousedown listener for dragging (note modal doesn't disable drag on maximize currently)
+             modalElement.addEventListener('mousedown', (e) => handleModalMouseDown(e, modalElement));
+        };
+
+
+        // --- Hidden Boot Log Logic ---
+
+        // Toggles the visibility of the hidden boot log
+        const toggleHiddenLog = () => {
+            showHiddenLog = !showHiddenLog; // Flip the state flag
+            renderHiddenLog(); // Re-render to show/hide the log
+        };
+
+        // Renders the hidden boot log overlay if showHiddenLog is true
+        const renderHiddenLog = () => {
+            const logArea = document.getElementById('hidden-log-area');
+            if (!logArea) return; // Ensure the container exists
+            logArea.innerHTML = ''; // Clear previous log overlay
+
+            // Only render if the state flag is true
+            if (!showHiddenLog) return;
+
+            // Create the overlay element
+            const logOverlay = document.createElement('div');
+            logOverlay.className = 'hidden-log-overlay fixed inset-0 z-55 flex items-center justify-center bg-black bg-opacity-85 p-4 font-mono'; // High z-index, covers screen
+            // Clicking the overlay itself closes the log
+            logOverlay.addEventListener('click', toggleHiddenLog);
+
+            // Set the inner HTML for the log window
+            logOverlay.innerHTML = `
+                <div class="bg-black border border-gray-700 rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] flex flex-col" onclick="event.stopPropagation()"> <div class="flex items-center justify-between p-3 border-b border-gray-600">
+                        <h2 class="text-lg font-bold text-gray-400">Verbose Boot Log</h2>
+                        <button class="hidden-log-close p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition duration-150">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <pre class="p-4 overflow-y-auto text-green-500 text-xs flex-grow whitespace-pre-wrap">${VERBOSE_BOOT_MESSAGES.join('\n')}</pre> </div>`;
+
+            // Append the overlay to the designated area
+            logArea.appendChild(logOverlay);
+
+            // Add listener to the close button within the log window
+            logOverlay.querySelector('.hidden-log-close').addEventListener('click', toggleHiddenLog);
+        };
+
+
+        // --- Shutdown and Restart Logic ---
+
+        // Handles the "Restart Session" action
+        const handleRestart = () => {
+            console.log("Restarting session...");
+            // Reset credentials
+            credentials = { email: null, agentId: null };
+            // Set state back to login
+            appState = 'login';
+            render(); // Re-render the login screen
+        };
+
+        // Initiates the shutdown process by showing a confirmation modal
+        const handleInitiateShutdown = () => {
+            appState = 'shutdown-confirm'; // Set state
+            // Render the confirmation modal
+            renderConfirmationModal(
+                "Confirm Shutdown", // Title
+                "Are you sure you want to shut down the OS?", // Message
+                handleConfirmShutdown, // Action on confirm
+                handleCancelShutdown // Action on cancel
+            );
+        };
+
+        // Handles the confirmation of the shutdown action
+        const handleConfirmShutdown = () => {
+            appState = 'shutting-down'; // Set state
+            removeConfirmationModal(); // Remove the confirmation dialog
+            renderShutdownSequence(); // Start displaying shutdown messages
+        };
+
+        // Handles the cancellation of the shutdown action
+        const handleCancelShutdown = () => {
+            appState = 'desktop'; // Revert state back to desktop
+            removeConfirmationModal(); // Remove the confirmation dialog
+            // No need to re-render desktop explicitly unless state change requires it
+        };
+
+        // Called after the shutdown message sequence completes
+        const handleShutdownComplete = () => {
+            console.log("Shutdown sequence complete. Redirecting...");
+            // Redirect the browser to the specified URL
+            window.location.href = 'https://808mafia.io';
+        };
+
+        // Renders a generic confirmation modal
+        const renderConfirmationModal = (title, message, onConfirm, onCancel) => {
+             removeConfirmationModal(); // Ensure no previous confirmation modal exists
+             const confirmModalOverlay = document.createElement('div');
+             confirmModalOverlay.id = 'confirmation-modal';
+             // Styles for the confirmation overlay and dialog
+             confirmModalOverlay.className = 'confirmation-modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-75 p-4 font-mono'; // High z-index
+             confirmModalOverlay.innerHTML = `
+                <div class="bg-black border border-yellow-600 rounded-lg shadow-xl shadow-yellow-900/50 w-full max-w-sm p-6">
+                    <h2 class="text-lg font-bold text-yellow-400 flex items-center gap-2 mb-4"><span class="icon-placeholder">⚠️</span> ${title}</h2>
+                    <p class="text-sm text-gray-300 mb-6">${message}</p>
+                    <div class="flex justify-end gap-3">
+                        <button id="confirm-cancel-button" class="px-4 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-500 transition duration-150 text-sm">Cancel</button>
+                        <button id="confirm-confirm-button" class="px-4 py-1.5 bg-red-700 text-white rounded-md hover:bg-red-600 transition duration-150 text-sm">Confirm</button>
+                    </div>
+                </div>`;
+             // Append the modal to the body
+             document.body.appendChild(confirmModalOverlay);
+             // Attach event listeners to the buttons
+             document.getElementById('confirm-cancel-button').onclick = onCancel;
+             document.getElementById('confirm-confirm-button').onclick = onConfirm;
+        };
+
+        // Removes the confirmation modal from the DOM
+        const removeConfirmationModal = () => {
+            const modal = document.getElementById('confirmation-modal');
+            if (modal) modal.remove();
+        };
+
+        // Renders the shutdown message sequence overlay
+        const renderShutdownSequence = () => {
+            appRoot.innerHTML = ''; // Clear the main app root content
+            const shutdownOverlay = document.createElement('div');
+            shutdownOverlay.className = 'shutdown-overlay fixed inset-0 flex items-center justify-center bg-black text-red-500 font-mono p-4 z-[100]'; // Highest z-index
+            shutdownOverlay.innerHTML = `
+                <div class="z-10 w-full max-w-xl bg-black bg-opacity-80 p-4 rounded-lg border border-red-800">
+                    <pre id="shutdown-messages" class="whitespace-pre-wrap text-xs md:text-sm"></pre> </div>`;
+            document.body.appendChild(shutdownOverlay); // Append directly to body
+
+            const messagesPre = document.getElementById('shutdown-messages');
+            let currentIndex = 0;
+            let displayedMessages = [];
+
+            // Function to display messages one by one with a delay
+            function displayNextMessage() {
+                if (currentIndex < SHUTDOWN_MESSAGES.length) {
+                    displayedMessages.push(SHUTDOWN_MESSAGES[currentIndex]);
+                    // Update the pre element with current messages and a blinking cursor simulation
+                    messagesPre.innerHTML = displayedMessages.join('\n') + '\n<div class="animate-pulse inline-block">_</div>';
+                    currentIndex++;
+                    // Schedule the next message display
+                    setTimeout(displayNextMessage, SHUTDOWN_DELAY);
+                } else {
+                    // All messages displayed, remove cursor
+                    messagesPre.innerHTML = displayedMessages.join('\n');
+                    // Wait a bit longer, then trigger the final shutdown action (redirect)
+                    setTimeout(handleShutdownComplete, SHUTDOWN_DELAY * 2);
+                }
+            }
+
+            // Start the message sequence
+            displayNextMessage();
+        };
+
+
+        // --- Global Event Listener (Escape Key) ---
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                 // Priority: Close modals first
+                 if (isNoteModalOpen) { closeNoteModal(); }
+                 else if (currentModal.isOpen) {
+                     // If standard modal is maximized, restore it first
+                     if (currentModal.isMaximized) {
+                         const modalElement = document.getElementById('standard-modal');
+                         if (modalElement) { toggleMaximizeModal(modalElement); }
+                     } else {
+                         // Otherwise, close the standard modal
+                         closeModal();
+                     }
+                 }
+                 // Then close start menu
+                 else if (isStartMenuOpen) { closeStartMenu(); }
+                 // Finally, toggle hidden boot log (only if no modals/menu are open)
+                 else if (appState === 'desktop' || appState === 'booting' || appState === 'login') {
+                     toggleHiddenLog();
+                 }
+                 // Note: Escape does not cancel shutdown confirmation or sequence
+            }
+        });
+
+
+        // --- Main Render Function ---
+        // This function orchestrates the rendering based on the current appState
+        const render = () => {
+             // --- Cleanup potentially persistent elements ---
+             removeConfirmationModal(); // Remove confirmation dialog if present
+             // Remove note modal if its container exists (handles cases where state might mismatch DOM)
+             const existingNoteModal = document.getElementById('note-modal-container');
+             if (existingNoteModal) existingNoteModal.remove();
+             // Remove standard modal only if the state says it should be closed
+             const existingStandardModalContainer = document.getElementById('standard-modal-container');
+             if (existingStandardModalContainer && !currentModal.isOpen) existingStandardModalContainer.remove();
+             // Remove hidden log overlay if it exists
+             const existingHiddenLog = document.querySelector('.hidden-log-overlay');
+             if (existingHiddenLog) existingHiddenLog.remove();
+             // Remove shutdown overlay unless we are actively shutting down
+             const existingShutdownOverlay = document.querySelector('.shutdown-overlay');
+             if (existingShutdownOverlay && appState !== 'shutting-down') existingShutdownOverlay.remove();
+
+            // --- Render based on application state ---
+            switch (appState) {
+                case 'booting':
+                    renderBootScreen();
+                    break;
+                case 'login':
+                    renderLoginScreen();
+                    break;
+                case 'desktop':
+                    // Render desktop structure only if it doesn't exist yet
+                    if (!document.getElementById('desktop-container')) {
+                        renderDesktop();
+                    }
+                    // Re-render standard modal if its state is open (ensures it's visible after state changes)
+                    if (currentModal.isOpen) {
+                        renderModal();
+                    }
+                    // Note: Note modal rendering is handled by its own open/close functions
+                    break;
+                case 'shutdown-confirm':
+                    // Ensure desktop is rendered in the background during confirmation
+                    if (!document.getElementById('desktop-container')) {
+                        renderDesktop();
+                    }
+                    // Confirmation modal is rendered separately by handleInitiateShutdown
+                    break;
+                case 'shutting-down':
+                    // Shutdown sequence handles its own rendering (clears appRoot)
+                    break;
+                default:
+                    // Fallback for invalid state
+                    appRoot.innerHTML = `<p class="z-10 fixed inset-0 flex items-center justify-center">Error: Invalid application state.</p>`;
+            }
+        };
+
+        // --- Initial Load ---
+        // Start the matrix background and render the initial application state ('booting') when the window loads
+        window.onload = () => {
+            startMatrix();
+            render();
+        };
+
+    </script>
+</body>
+</html>

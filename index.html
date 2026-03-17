@@ -3,17 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DripFest</title>
-    <link rel="stylesheet" href="style.css">
+    <title>808 Mafia OS Desktop Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="scripts.js"></script>
 </head>
 <body>
-    <h1>Welcome to DripFest</h1>
-    <div id="content">
-        <iframe src="drip-fest-pitch.html" width="800" height="600"></iframe>
+    <div id="desktop">
+        <!-- Existing desktop features, icons, animations, and functionality will go here -->
+        <script>
+          const modal = document.createElement('div');
+          modal.id = 'pitchDeckModal';
+          modal.style.display = 'none';
+          document.body.appendChild(modal);
+
+          function showModal() {
+              modal.style.display = 'block';
+              const iframe = document.createElement('iframe');
+              iframe.src = 'drip-fest-pitch.html';
+              modal.appendChild(iframe);
+              const audio = new Audio('drip-fest-bgm.mp3');
+              audio.play();
+          }
+
+          // Simulating password protection
+          const password = prompt('Enter the password to access DripFest Pitch Deck:');
+          if(password === '808') {
+              showModal();
+          } else {
+              alert('Incorrect password!');
+          }
+        </script>
     </div>
-    <audio autoplay loop>
-        <source src="drip-fest-bgm.mp3" type="audio/mpeg">
-        Your browser does not support the audio tag.
-    </audio>
 </body>
 </html>

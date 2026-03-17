@@ -1,38 +1,444 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>808 Mafia OS Desktop Interface</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="scripts.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>808 MAFIA OS • v4.20</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #0a0012;
+      --matrix: #00ff41;
+      --neon-cyan: #00f5ff;
+      --neon-purple: #c300ff;
+      --neon-red: #ff0044;
+      --panel: rgba(12, 5, 22, 0.75);
+      --border: rgba(0, 245, 255, 0.18);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      height: 100vh;
+      background: var(--bg);
+      color: #e0e0ff;
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+      image-rendering: pixelated;
+    }
+    canvas#matrix {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.45;
+    }
+
+    /* Boot screen */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      background: black;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--matrix);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.1rem;
+      letter-spacing: 6px;
+      transition: opacity 1.2s;
+    }
+    #boot-progress {
+      margin-top: 60px;
+      width: 420px;
+      height: 14px;
+      background: #111;
+      border: 2px solid var(--matrix);
+      position: relative;
+      overflow: hidden;
+    }
+    #boot-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ff41, #00aa30);
+      transition: width 3.8s ease-out;
+    }
+
+    /* Login */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 9000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    .login-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3.2rem 4rem;
+      width: 420px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(0,245,255,0.12);
+    }
+    input {
+      background: #0a0a14;
+      border: 1px solid #333366;
+      color: var(--neon-cyan);
+      font-family: inherit;
+      padding: 12px 16px;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 1.1rem;
+    }
+    button {
+      background: transparent;
+      border: 2px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 12px 36px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: all 0.2s;
+    }
+    button:hover { background: rgba(0,245,255,0.14); box-shadow: 0 0 25px var(--neon-cyan); }
+
+    /* Desktop */
+    #desktop {
+      display: none;
+      height: 100vh;
+      position: relative;
+      z-index: 10;
+    }
+    .icon {
+      position: absolute;
+      width: 82px;
+      text-align: center;
+      color: white;
+      font-size: 0.82rem;
+      line-height: 1.15;
+      cursor: pointer;
+      user-select: none;
+    }
+    .icon img, .icon .emoji { font-size: 2.8rem; display: block; margin: 0 auto 4px; filter: drop-shadow(0 2px 6px black); }
+    .icon.active { background: rgba(80,60,140,0.4); border-radius: 6px; }
+
+    /* Window */
+    .window {
+      position: absolute;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.7), 0 0 20px rgba(0,245,255,0.15);
+      overflow: hidden;
+      min-width: 480px;
+      min-height: 320px;
+      resize: both;
+      z-index: 100;
+    }
+    .titlebar {
+      background: linear-gradient(to bottom, #1a0033, #0f001a);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      user-select: none;
+    }
+    .title { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; color: var(--neon-cyan); letter-spacing: 1px; }
+    .controls button {
+      width: 18px; height: 18px; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer;
+    }
+    .close   { background: #ff5f56; }
+    .min     { background: #ffbd2e; }
+    .max     { background: #28c940; }
+    .content { padding: 16px; height: calc(100% - 36px); overflow: auto; color: #ddd; }
+
+    /* Taskbar */
+    #taskbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 38px;
+      background: rgba(8,4,18,0.88);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 200;
+      font-size: 0.9rem;
+    }
+    #start-btn {
+      background: transparent;
+      border: 1px solid var(--neon-purple);
+      color: var(--neon-purple);
+      padding: 6px 18px;
+      font-family: 'Orbitron', sans-serif;
+      cursor: pointer;
+    }
+    #clock { margin-left: auto; color: #aaa; }
+
+    /* Folder / File list */
+    .file-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      padding: 12px;
+    }
+    .file-item {
+      padding: 12px 8px;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .file-item:hover { background: rgba(80,40,120,0.3); }
+    .file-item.locked { color: #ff6666; }
+
+    /* Password modal */
+    #pwd-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .pwd-box {
+      background: var(--panel);
+      border: 2px solid var(--neon-red);
+      padding: 2.5rem 3.5rem;
+      border-radius: 8px;
+      width: 380px;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(255,0,60,0.3);
+    }
+  </style>
 </head>
 <body>
-    <div id="desktop">
-        <!-- Existing desktop features, icons, animations, and functionality will go here -->
-        <script>
-          const modal = document.createElement('div');
-          modal.id = 'pitchDeckModal';
-          modal.style.display = 'none';
-          document.body.appendChild(modal);
 
-          function showModal() {
-              modal.style.display = 'block';
-              const iframe = document.createElement('iframe');
-              iframe.src = 'drip-fest-pitch.html';
-              modal.appendChild(iframe);
-              const audio = new Audio('drip-fest-bgm.mp3');
-              audio.play();
-          }
+<canvas id="matrix"></canvas>
 
-          // Simulating password protection
-          const password = prompt('Enter the password to access DripFest Pitch Deck:');
-          if(password === '808') {
-              showModal();
-          } else {
-              alert('Incorrect password!');
-          }
-        </script>
-    </div>
+<!-- Boot screen -->
+<div id="boot-screen">
+  <div>808 MAFIA OS</div>
+  <div id="boot-progress"><div id="boot-bar"></div></div>
+</div>
+
+<!-- Login screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2 style="color:var(--neon-purple); margin-bottom:1.8rem;">AGENT AUTHENTICATION</h2>
+    <input type="email" placeholder="EMAIL" id="agent-email" autocomplete="off"/>
+    <input type="text" placeholder="AGENT ID (auto-generated)" id="agent-id" readonly/>
+    <button onclick="login()">ENTER SYSTEM</button>
+  </div>
+</div>
+
+<!-- Desktop -->
+<div id="desktop">
+
+  <!-- Desktop icons (example layout - adjust positions) -->
+  <div class="icon" style="left:40px; top:40px;" ondblclick="openFolder('Event Docs')">
+    <div class="emoji">📁</div>
+    <div>Event Docs</div>
+  </div>
+
+  <div class="icon" style="left:40px; top:180px;">
+    <div class="emoji">🎵</div>
+    <div>SoundCloud</div>
+  </div>
+
+  <div class="icon" style="left:40px; top:320px;">
+    <div class="emoji">💾</div>
+    <div>REC</div>
+  </div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <button id="start-btn">START</button>
+    <div id="clock"></div>
+  </div>
+
+</div>
+
+<!-- Password prompt for protected file -->
+<div id="pwd-modal">
+  <div class="pwd-box">
+    <h2 style="color:var(--neon-red);">🔒 ACCESS DENIED</h2>
+    <p style="margin:1.5rem 0; color:#ff9999;">This document is restricted.<br/>Enter access code:</p>
+    <input type="password" id="access-code" placeholder="••••••" style="font-size:1.3rem; text-align:center;"/>
+    <br/>
+    <button onclick="checkPitchDeckPassword()" style="margin-top:1.8rem; border-color:var(--neon-red); color:var(--neon-red);">AUTHENTICATE</button>
+  </div>
+</div>
+
+<!-- Hidden iframe / container for pitch deck -->
+<iframe id="pitchdeck-frame" style="display:none; width:100%; height:100%; border:none;"></iframe>
+
+<script>
+// ──────────────────────────────────────────────
+// Matrix rain background
+// ──────────────────────────────────────────────
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン█▓▒░→←↑↓■□◇◆○●★☆♪♫';
+const fontSize = 16;
+const columns = canvas.width / fontSize;
+const drops = Array(Math.floor(columns)).fill(1);
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(10, 0, 18, 0.05)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#00ff41';
+  ctx.font = fontSize + 'px monospace';
+
+  for(let i = 0; i < drops.length; i++) {
+    const text = chars[Math.floor(Math.random()*chars.length)];
+    const x = i * fontSize;
+    const y = drops[i] * fontSize;
+    ctx.fillText(text, x, y);
+    if(y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 40);
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// ──────────────────────────────────────────────
+// Boot sequence
+// ──────────────────────────────────────────────
+window.onload = () => {
+  const bar = document.getElementById('boot-bar');
+  setTimeout(() => { bar.style.width = '100%'; }, 300);
+  setTimeout(() => {
+    document.getElementById('boot-screen').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('boot-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }, 1200);
+  }, 4200);
+};
+
+// ──────────────────────────────────────────────
+// Simple login (fake Agent ID)
+// ──────────────────────────────────────────────
+function login() {
+  const email = document.getElementById('agent-email').value.trim();
+  if(!email) return alert("Enter your agent email.");
+  const agentId = 'A-' + Math.floor(Math.random()*900000+100000);
+  document.getElementById('agent-id').value = agentId;
+  setTimeout(() => {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('desktop').style.display = 'block';
+    updateClock();
+    setInterval(updateClock, 1000);
+  }, 800);
+}
+
+// ──────────────────────────────────────────────
+// Clock
+// ──────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour12:true});
+}
+
+// ──────────────────────────────────────────────
+// Open folder (demo)
+// ──────────────────────────────────────────────
+function openFolder(name) {
+  if(name === 'Event Docs') {
+    alert("Event Docs folder opened.\n\nFiles:\n • Mission_Statement.pdf\n • Event_Details_2026.txt\n • Contact_List.xlsx\n • DripFest_pitchDeck.exe   🔒");
+    // In real version → show modal or new window with file list
+  }
+}
+
+// ──────────────────────────────────────────────
+// Pitch Deck password protection
+// ──────────────────────────────────────────────
+function openPitchDeck() {
+  document.getElementById('pwd-modal').style.display = 'flex';
+}
+
+function checkPitchDeckPassword() {
+  const code = document.getElementById('access-code').value.trim();
+  if(code === '808') {
+    document.getElementById('pwd-modal').style.display = 'none';
+    
+    // Show in large centered window
+    const w = Math.min(window.innerWidth * 0.92, 1480);
+    const h = Math.min(window.innerHeight * 0.90, 920);
+    const left = (window.innerWidth - w)/2;
+    const top  = (window.innerHeight - h)/2 - 20;
+
+    const win = document.createElement('div');
+    win.className = 'window';
+    win.style.left = left + 'px';
+    win.style.top  = top  + 'px';
+    win.style.width = w + 'px';
+    win.style.height = h + 'px';
+
+    win.innerHTML = `
+      <div class="titlebar">
+        <div class="title">DripFest_PitchDeck.exe — CONFIDENTIAL</div>
+        <div class="controls">
+          <button class="close" onclick="this.closest('.window').remove()"></button>
+          <button class="min"></button>
+          <button class="max"></button>
+        </div>
+      </div>
+      <div class="content" style="background:#000;">
+        <iframe src="drip-fest-pitch.html" style="width:100%;height:100%;border:none;"></iframe>
+      </div>
+    `;
+    document.body.appendChild(win);
+
+    // Auto-play background music
+    const audio = new Audio('drip-fest-bgm.mp3');
+    audio.loop = true;
+    audio.volume = 0.14;
+    audio.play().catch(e => console.log("Audio blocked — user gesture needed", e));
+  } else {
+    alert("ACCESS DENIED — Incorrect code.");
+  }
+}
+
+// Make windows draggable (very basic)
+document.addEventListener('mousedown', e => {
+  if(e.target.closest('.titlebar')) {
+    const win = e.target.closest('.window');
+    if(!win) return;
+    let offsetX = e.clientX - win.offsetLeft;
+    let offsetY = e.clientY - win.offsetTop;
+
+    function move(e) {
+      win.style.left = (e.clientX - offsetX) + 'px';
+      win.style.top  = (e.clientY - offsetY) + 'px';
+    }
+    function up() { document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up); }
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  }
+});
+
+// You can call openPitchDeck() from your file list / icon
+// Example: ondblclick="openPitchDeck()" on the locked file item
+</script>
 </body>
 </html>

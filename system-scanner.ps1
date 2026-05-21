@@ -27,9 +27,9 @@ $Colors = @{
 function Write-Header {
     param([string]$Text)
     Write-Host "`n" -NoNewline
-    Write-Host "=" * 80 -ForegroundColor $Colors.Header
+    Write-Host ("=" * 80) -ForegroundColor $Colors.Header
     Write-Host "  $Text" -ForegroundColor $Colors.Header
-    Write-Host "=" * 80 -ForegroundColor $Colors.Header
+    Write-Host ("=" * 80) -ForegroundColor $Colors.Header
 }
 
 function Write-Status {
@@ -83,7 +83,7 @@ function Invoke-FullSystemScan {
     
     # Check Windows Update status
     Write-Status "Checking Windows Updates..." "INFO"
-    $Updates = Get-WmiObject -Query "SELECT * FROM CCM_SoftwareUpdate" -Namespace "root\ccm\clientSDK" 2>$null
+    $Updates = Get-WmiObject -Query "SELECT * FROM CCM_SoftwareUpdate" -Namespace "root\ccm\clientSDK" -ErrorAction SilentlyContinue 2>$null
     if ($Updates) {
         Write-Status "Updates available: $($Updates.Count)" "WARNING"
     } else {
@@ -93,12 +93,14 @@ function Invoke-FullSystemScan {
     # Check Defender status
     Write-Status "Scanning Windows Defender status..." "INFO"
     try {
-        $Defender = Get-MpComputerStatus
-        Write-Status "Defender: $($Defender.AntivirusEnabled)" "SUCCESS"
-        Write-Status "Real-time Protection: $($Defender.RealTimeProtectionEnabled)" "SUCCESS"
-        Write-Status "Last Scan: $($Defender.QuickScanTime)" "INFO"
+        $Defender = Get-MpComputerStatus -ErrorAction SilentlyContinue
+        if ($Defender) {
+            Write-Status "Defender: $($Defender.AntivirusEnabled)" "SUCCESS"
+            Write-Status "Real-time Protection: $($Defender.RealTimeProtectionEnabled)" "SUCCESS"
+            Write-Status "Last Scan: $($Defender.QuickScanTime)" "INFO"
+        }
     } catch {
-        Write-Status "Defender scan failed" "ERROR"
+        Write-Status "Defender scan not available" "WARNING"
     }
     
     # Disk health check
@@ -114,7 +116,7 @@ function Invoke-FullSystemScan {
     
     # Services check
     Write-Status "Scanning critical services..." "INFO"
-    $CriticalServices = @("WinDefend", "WinRM", "RemoteRegistry", "RpcSs")
+    $CriticalServices = @("WinDefend", "RpcSs", "BITS")
     $CriticalServices | ForEach-Object {
         $Service = Get-Service -Name $_ -ErrorAction SilentlyContinue
         if ($Service) {
@@ -128,7 +130,7 @@ function Invoke-FullSystemScan {
     
     # Startup programs
     Write-Status "Analyzing startup programs..." "INFO"
-    $StartupApps = Get-CimInstance Win32_StartupCommand | Measure-Object
+    $StartupApps = Get-CimInstance Win32_StartupCommand -ErrorAction SilentlyContinue | Measure-Object
     Write-Status "Found $($StartupApps.Count) startup items" "INFO"
 }
 
@@ -138,7 +140,7 @@ function Invoke-SecurityAudit {
     
     # Check for open ports
     Write-Status "Checking for open ports..." "INFO"
-    $OpenPorts = Get-NetTCPConnection -State Listen | Select-Object -ExpandProperty LocalPort | Sort-Object -Unique
+    $OpenPorts = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique | Sort-Object
     if ($OpenPorts.Count -gt 0) {
         Write-Status "Open ports found:" "WARNING"
         $OpenPorts | ForEach-Object { Write-Host "  Port: $_" -ForegroundColor $Colors.Warning }
@@ -148,41 +150,64 @@ function Invoke-SecurityAudit {
     
     # Check firewall rules
     Write-Status "Analyzing Windows Firewall..." "INFO"
-    $FWRules = Get-NetFirewallRule -Enabled $true | Measure-Object
-    Write-Status "Active firewall rules: $($FWRules.Count)" "INFO"
+    try {
+        $FWRules = Get-NetFirewallRule -Enabled $true -ErrorAction SilentlyContinue | Measure-Object
+        Write-Status "Active firewall rules: $($FWRules.Count)" "INFO"
+    } catch {
+        Write-Status "Firewall check not available" "WARNING"
+    }
     
     # User accounts audit
     Write-Status "Auditing user accounts..." "INFO"
-    $Users = Get-LocalUser | Where-Object { $_.Enabled }
-    $Users | ForEach-Object {
-        $PasswordAge = (New-TimeSpan -Start $_.LastLogon).Days
-        Write-Host "  User: $($_.Name) | Last Login: $PasswordAge days ago" -ForegroundColor $Colors.Info
+    try {
+        $Users = Get-LocalUser | Where-Object { $_.Enabled } -ErrorAction SilentlyContinue
+        $Users | ForEach-Object {
+            Write-Host "  User: $($_.Name)" -ForegroundColor $Colors.Info
+        }
+    } catch {
+        Write-Status "User audit not available" "WARNING"
     }
     
-    # Check for weak admin accounts
+    # Check for admin accounts
     Write-Status "Checking admin account status..." "INFO"
-    $AdminUsers = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
-    $AdminUsers | ForEach-Object {
-        Write-Status "Admin: $($_.Name)" "WARNING"
+    try {
+        $AdminUsers = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
+        if ($AdminUsers) {
+            Write-Status "Admin accounts found: $($AdminUsers.Count)" "WARNING"
+        }
+    } catch {
+        Write-Status "Admin check not available" "WARNING"
     }
     
     # Scheduled tasks audit
     Write-Status "Scanning scheduled tasks..." "INFO"
-    $Tasks = Get-ScheduledTask | Where-Object { $_.State -eq "Ready" } | Measure-Object
-    Write-Status "Active scheduled tasks: $($Tasks.Count)" "INFO"
+    try {
+        $Tasks = Get-ScheduledTask | Where-Object { $_.State -eq "Ready" } -ErrorAction SilentlyContinue | Measure-Object
+        Write-Status "Active scheduled tasks: $($Tasks.Count)" "INFO"
+    } catch {
+        Write-Status "Task scan not available" "WARNING"
+    }
     
     # Network connections
     Write-Status "Checking active network connections..." "INFO"
-    $Connections = Get-NetTCPConnection -State Established | Measure-Object
-    Write-Status "Established connections: $($Connections.Count)" "INFO"
+    try {
+        $Connections = Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | Measure-Object
+        Write-Status "Established connections: $($Connections.Count)" "INFO"
+    } catch {
+        Write-Status "Connection check not available" "WARNING"
+    }
     
     # UAC status
     Write-Status "Checking User Account Control (UAC)..." "INFO"
-    $UAC = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -ErrorAction SilentlyContinue
-    if ($UAC.EnableLUA -eq 1) {
-        Write-Status "UAC is enabled" "SUCCESS"
-    } else {
-        Write-Status "UAC is disabled - SECURITY RISK" "ERROR"
+    try {
+        $UAC = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -ErrorAction SilentlyContinue
+        if ($UAC.EnableLUA -eq 1) {
+            Write-Status "UAC is enabled" "SUCCESS"
+        } else {
+            Write-Status "UAC is disabled - SECURITY RISK" "ERROR"
+        }
+    } catch {
+        Write-Status "UAC check not available" "WARNING"
     }
     
     # BitLocker status
@@ -206,17 +231,15 @@ function Test-Dependencies {
         "Git" = "git"
         "Node.js" = "node"
         "Python" = "python"
-        "Docker" = "docker"
-        ".NET" = "dotnet"
     }
     
     $Dependencies.GetEnumerator() | ForEach-Object {
         $app = $_.Key
         $cmd = $_.Value
         try {
-            $version = & $cmd --version 2>$null
+            $version = & $cmd --version 2>$null | Select-Object -First 1
             if ($version) {
-                Write-Status "$app : $($version -split "`n" | Select-Object -First 1)" "SUCCESS"
+                Write-Status "$app : $version" "SUCCESS"
             } else {
                 Write-Status "$app : Not found" "WARNING"
             }
@@ -233,64 +256,40 @@ function Install-Dependencies {
     Write-Status "Checking for Windows Package Manager (winget)..." "INFO"
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Write-Status "winget found" "SUCCESS"
-        
-        $AppsToInstall = @(
-            "Microsoft.PowerShell",
-            "Git.Git",
-            "OpenJS.NodeJS",
-            "Python.Python.3.11",
-            "Docker.DockerDesktop"
-        )
-        
-        Write-Status "Installing core development tools..." "INFO"
-        $AppsToInstall | ForEach-Object {
-            Write-Status "Installing $_..." "INFO"
-            & winget install --id $_ --accept-source-agreements --accept-package-agreements -q
-        }
     } else {
-        Write-Status "winget not found - please install App Installer from Microsoft Store" "ERROR"
+        Write-Status "winget not found - install App Installer from Microsoft Store" "ERROR"
+        return
     }
     
-    # Install eDEX-UI via npm
-    Write-Status "Installing eDEX-UI terminal theme..." "INFO"
-    if (Get-Command npm -ErrorAction SilentlyContinue) {
-        npm install -g edex-ui 2>$null
-        Write-Status "eDEX-UI installed" "SUCCESS"
-    } else {
-        Write-Status "npm not found - cannot install eDEX-UI" "WARNING"
-    }
+    Write-Status "Installing core development tools..." "INFO"
+    Write-Status "Git..." "INFO"
+    winget install --id Git.Git --accept-source-agreements --accept-package-agreements -q 2>$null
     
-    # Chocolatey fallback
-    Write-Status "Checking Chocolatey availability..." "INFO"
-    if (Get-Command choco -ErrorAction SilentlyContinue) {
-        Write-Status "Chocolatey available" "SUCCESS"
-    } else {
-        Write-Status "Installing Chocolatey..." "INFO"
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    }
+    Write-Status "Node.js..." "INFO"
+    winget install --id OpenJS.NodeJS --accept-source-agreements --accept-package-agreements -q 2>$null
+    
+    Write-Status "Python..." "INFO"
+    winget install --id Python.Python.3.11 --accept-source-agreements --accept-package-agreements -q 2>$null
+    
+    Write-Status "Dependencies installation complete" "SUCCESS"
 }
 
-# ========== DASHBOARD / EDEX-UI SETUP ==========
+# ========== DASHBOARD ==========
 function Show-Dashboard {
-    Write-Header "SYSTEM DASHBOARD"
-    
     Clear-Host
     Write-Host @"
-    
+
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                   808 MAFIA SYSTEM TERMINAL DASHBOARD                        ║
-║                            eDEX-UI Powered                                   ║
+║                         Windows Security Audit                               ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 "@ -ForegroundColor $Colors.Header
     
     Get-SystemSpecs
     
-    Write-Host "`n" -NoNewline
-    Write-Host "[DASHBOARD] " -ForegroundColor $Colors.Header -NoNewline
-    Write-Host "Press Q to quit, S for full scan, A for audit" -ForegroundColor $Colors.Info
+    Write-Host "`n[DASHBOARD]" -ForegroundColor $Colors.Header -NoNewline
+    Write-Host " System dashboard loaded - Press Q to quit" -ForegroundColor $Colors.Info
 }
 
 function Setup-BootDashboard {
@@ -303,107 +302,90 @@ function Setup-BootDashboard {
         New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
     }
     
-    $DashboardCode = @"
+    $DashboardCode = @'
+
 # 808 Mafia System Dashboard - Auto-load on PowerShell startup
 Write-Host "Loading 808 Mafia System Dashboard..." -ForegroundColor Cyan
 Start-Sleep -Milliseconds 500
 
-# Function to display dashboard
 function Invoke-SystemDashboard {
     Clear-Host
-    Write-Host @"
+    Write-Host "╔═══════════════════════════════════════════════════════════════════════════��╗" -ForegroundColor Magenta
+    Write-Host "║              808 MAFIA SYSTEM DASHBOARD - PowerShell Terminal               ║" -ForegroundColor Magenta
+    Write-Host "╚════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Magenta
+    Write-Host ""
     
-╔════════════════════════════════════════════════════════════════════════════╗
-║              808 MAFIA SYSTEM DASHBOARD - eDEX-UI Terminal                 ║
-║                    PowerShell Profile Loaded                               ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-"@ -ForegroundColor Magenta
+    $OS = Get-WmiObject -Class Win32_OperatingSystem
+    $CPU = Get-WmiObject -Class Win32_Processor | Select-Object -First 1
+    $RAM = Get-WmiObject -Class Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
     
-    `$OS = Get-WmiObject -Class Win32_OperatingSystem
-    `$CPU = Get-WmiObject -Class Win32_Processor | Select-Object -First 1
-    `$RAM = Get-WmiObject -Class Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
+    Write-Host "┌─ SYSTEM STATUS ────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ OS: $($OS.Caption) Build $($OS.BuildNumber)" -ForegroundColor Cyan
+    Write-Host "│ CPU: $($CPU.Name)" -ForegroundColor Cyan
+    Write-Host "│ RAM: $([math]::Round($RAM.Sum / 1GB, 2))GB" -ForegroundColor Cyan
+    Write-Host "└─────────────────────────────────────────────────────────┘" -ForegroundColor Cyan
     
-    Write-Host "┌─ SYSTEM STATUS ────────────────────────��────────────┐" -ForegroundColor Cyan
-    Write-Host "│ OS: " -NoNewline -ForegroundColor Cyan
-    Write-Host "`$(`$OS.Caption) Build `$(`$OS.BuildNumber)" -ForegroundColor Green
-    Write-Host "│ CPU: " -NoNewline -ForegroundColor Cyan
-    Write-Host "`$(`$CPU.Name)" -ForegroundColor Green
-    Write-Host "│ RAM: " -NoNewline -ForegroundColor Cyan
-    Write-Host "`$([math]::Round(`$RAM.Sum / 1GB, 2))GB" -ForegroundColor Green
-    Write-Host "└──────────────────────────────────────────────────────┘" -ForegroundColor Cyan
-    
-    Write-Host "`nDisk Status:" -ForegroundColor Yellow
-    Get-Volume | Where-Object { `$_.DriveLetter } | ForEach-Object {
-        `$Free = [math]::Round((`$_.SizeRemaining / `$_.Size) * 100, 2)
-        Write-Host "  `$(`$_.DriveLetter): `$([math]::Round(`$_.Size / 1GB, 2))GB | Free: `$Free%" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Disk Status:" -ForegroundColor Yellow
+    Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object {
+        $Free = [math]::Round(($_.SizeRemaining / $_.Size) * 100, 2)
+        Write-Host "  $($_.DriveLetter): $([math]::Round($_.Size / 1GB, 2))GB | Free: $Free%" -ForegroundColor Green
     }
-    
-    Write-Host "`nNetwork Status:" -ForegroundColor Yellow
-    Get-NetAdapter | Where-Object { `$_.Status -eq "Up" } | ForEach-Object {
-        Write-Host "  `$(`$_.Name): `$(`$_.Status)" -ForegroundColor Green
-    }
-    
-    Write-Host "`nQuick Commands:" -ForegroundColor Yellow
-    Write-Host "  > system-scan    : Run full system scan" -ForegroundColor Cyan
-    Write-Host "  > security-audit : Run security audit" -ForegroundColor Cyan
-    Write-Host "  > edex-ui        : Launch eDEX-UI terminal" -ForegroundColor Cyan
-    Write-Host "  > fix-deps       : Install/fix dependencies" -ForegroundColor Cyan
+    Write-Host ""
 }
 
-# Auto-display dashboard on startup
 Invoke-SystemDashboard
 
-# Alias shortcuts
-Set-Alias -Name system-scan -Value { powershell -ExecutionPolicy Bypass -File "$(Split-Path $PROFILE)\..\..\system-scanner.ps1" -FullScan }
-Set-Alias -Name security-audit -Value { powershell -ExecutionPolicy Bypass -File "$(Split-Path $PROFILE)\..\..\system-scanner.ps1" -SecurityAudit }
-Set-Alias -Name fix-deps -Value { powershell -ExecutionPolicy Bypass -File "$(Split-Path $PROFILE)\..\..\system-scanner.ps1" -FixDependencies }
-Set-Alias -Name edex-ui -Value { edex-ui }
-"@
+'@
     
-    Add-Content -Path $ProfilePath -Value $DashboardCode
-    Write-Status "Dashboard setup complete at: $ProfilePath" "SUCCESS"
-    Write-Status "Restart PowerShell to see the dashboard" "INFO"
+    if (Test-Path $ProfilePath) {
+        Add-Content -Path $ProfilePath -Value $DashboardCode
+    } else {
+        Set-Content -Path $ProfilePath -Value $DashboardCode
+    }
+    
+    Write-Status "Dashboard setup complete" "SUCCESS"
+    Write-Status "Restart PowerShell to see the dashboard on boot" "INFO"
 }
 
 # ========== MAIN EXECUTION ==========
 Write-Host "`n" -NoNewline
-Write-Host "808 MAFIA SYSTEM SCANNER v1.0" -ForegroundColor $Colors.Header
-Write-Host "=================================" -ForegroundColor $Colors.Header
+Write-Host "808 MAFIA SYSTEM SCANNER v1.0 - FIXED" -ForegroundColor $Colors.Header
+Write-Host ("=" * 50) -ForegroundColor $Colors.Header
 
-if ($All -or $Dashboard) {
+if ($All) {
+    Show-Dashboard
+    Get-SystemSpecs
+    Invoke-FullSystemScan
+    Invoke-SecurityAudit
+    Test-Dependencies
+    Setup-BootDashboard
+    Write-Header "ALL SCANS COMPLETE"
+    Write-Status "System audit finished successfully" "SUCCESS"
+}
+elseif ($Dashboard) {
     Show-Dashboard
 }
-
-if ($All -or $FullScan) {
+elseif ($FullScan) {
     Get-SystemSpecs
     Invoke-FullSystemScan
 }
-
-if ($All -or $SecurityAudit) {
+elseif ($SecurityAudit) {
     Invoke-SecurityAudit
 }
-
-if ($FixDependencies) {
+elseif ($FixDependencies) {
     Test-Dependencies
     Install-Dependencies
 }
-
-if ($All) {
-    Write-Header "SETUP COMPLETE"
-    Write-Status "Running all scans..." "SUCCESS"
-    Setup-BootDashboard
-}
-
-if (!$FullScan -and !$SecurityAudit -and !$FixDependencies -and !$Dashboard -and !$All) {
-    Write-Host "`nUsage: powershell -ExecutionPolicy Bypass -File system-scanner.ps1 [options]`n" -ForegroundColor $Colors.Info
+else {
+    Write-Host "`nUsage:`n" -ForegroundColor $Colors.Info
+    Write-Host "powershell -ExecutionPolicy Bypass -File system-scanner.ps1 -All`n" -ForegroundColor $Colors.Header
     Write-Host "Options:" -ForegroundColor $Colors.Header
-    Write-Host "  -FullScan           : Run complete system scan" -ForegroundColor $Colors.Info
-    Write-Host "  -SecurityAudit      : Run security & penetration testing baseline" -ForegroundColor $Colors.Info
-    Write-Host "  -FixDependencies    : Install/fix required dependencies" -ForegroundColor $Colors.Info
+    Write-Host "  -All                : Run everything (recommended)" -ForegroundColor $Colors.Info
     Write-Host "  -Dashboard          : Show system dashboard" -ForegroundColor $Colors.Info
-    Write-Host "  -All                : Run everything and setup boot dashboard" -ForegroundColor $Colors.Info
-    Write-Host "`nExample: powershell -ExecutionPolicy Bypass -File system-scanner.ps1 -All`n" -ForegroundColor $Colors.Header
+    Write-Host "  -FullScan           : Run complete system scan" -ForegroundColor $Colors.Info
+    Write-Host "  -SecurityAudit      : Run security & pen testing" -ForegroundColor $Colors.Info
+    Write-Host "  -FixDependencies    : Install missing tools`n" -ForegroundColor $Colors.Info
 }
 
-Write-Host "`n" -NoNewline
+Write-Host ""
